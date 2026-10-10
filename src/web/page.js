@@ -296,15 +296,14 @@ $('a').onclick=async()=>{
 };
 $('refreshNow').onclick=async()=>{
   if(!adminToken)return;
-  const button=$('refreshNow');button.disabled=true;button.textContent='갱신 요청 중...';$('s').textContent='자동 갱신을 요청하고 있습니다...';
+  const button=$('refreshNow');button.dataset.refreshing='true';button.disabled=true;button.textContent='갱신 요청 전송 중...';$('s').textContent='자동 갱신 요청을 전송하고 있습니다...';
   try{
     const response=await fetch('/admin/refresh',{method:'POST',headers:{Authorization:'Bearer '+adminToken}});
     const result=await response.json();
     if((!response.ok&&result.status!=='running')||!['started','running'].includes(result.status))throw new Error(result.message||'자동 갱신 요청에 실패했습니다.');
     $('s').textContent=result.status==='running'?'이미 자동 갱신이 진행 중입니다.':'자동 갱신을 시작했습니다. 진행 상태를 확인하고 있습니다...';
     if(typeof pollCrawlStatus==='function')pollCrawlStatus(true);
-  }catch(e){$('s').textContent=e.message}
-  finally{button.disabled=false;button.textContent='지금 갱신'}
+  }catch(e){delete button.dataset.refreshing;button.disabled=false;button.textContent='지금 갱신';$('s').textContent=e.message}
 };
 $('b').onclick=async e=>{
   const button=e.target.closest('.del');

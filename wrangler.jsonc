@@ -21,7 +21,7 @@
     }
   ],
   "vars": {
-    "GALLERIES_JSON": "[onshinproject]",
+    "GALLERIES_JSON": "[{\"id\":\"onshinproject\",\"path\":\"mgallery\"}]",
     "MAX_CRAWL_PAGES": "20",
     "MAX_CRAWL_GALLERIES": "10"
   }

@@ -8,24 +8,46 @@ function pageWithStatus() {
 async function showCrawlStatus(){
   try{
     const response=await fetch('/refresh-status.json?token='+encodeURIComponent(viewToken));
-    if(!response.ok)return;
+    if(!response.ok)return null;
     const status=await response.json();
     const el=$('crawl-status');
-    if(!['running','failed','interrupted'].includes(status?.state)){el.style.display='none';return;}
+    el.dataset.state=status?.state||'';
+    if(!['queued','running','failed','interrupted'].includes(status?.state)){
+      el.style.display='none';
+      return status;
+    }
     el.style.display='block';
-    el.dataset.state=status.state;
-    el.style.color=status.state==='running'?'var(--muted)':'var(--danger-text)';
-    el.textContent=status.message||({running:'자동 갱신 중',failed:'자동 갱신 실패',interrupted:'자동 갱신 중단'}[status.state]);
+    el.style.color=['queued','running'].includes(status.state)?'var(--muted)':'var(--danger-text)';
+    el.textContent=status.message||({queued:'자동 갱신 대기 중',running:'자동 갱신 중',failed:'자동 갱신 실패',interrupted:'자동 갱신 중단'}[status.state]);
     if(status.state==='running'&&status.galleryId)el.textContent+=' ('+status.galleryId+' '+(status.page||0)+'페이지)';
-  }catch(e){}
+    return status;
+  }catch(e){return null}
 }
 let crawlStatusTimer;
 async function pollCrawlStatus(keepPolling=false){
   clearTimeout(crawlStatusTimer);
-  await showCrawlStatus();
+  const status=await showCrawlStatus();
   const el=$('crawl-status');
-  if(el.dataset.state==='running')crawlStatusTimer=setTimeout(()=>pollCrawlStatus(false),15000);
-  else if(keepPolling)crawlStatusTimer=setTimeout(()=>pollCrawlStatus(true),5000);
+  const active=['queued','running'].includes(status?.state);
+  const button=$('refreshNow');
+  if(active){
+    button.dataset.refreshing='true';
+    button.disabled=true;
+    button.textContent=status.state==='queued'?'갱신 대기 중...':'갱신 진행 중...';
+    crawlStatusTimer=setTimeout(()=>pollCrawlStatus(false),status.state==='queued'?2500:8000);
+  }else if(keepPolling){
+    crawlStatusTimer=setTimeout(()=>pollCrawlStatus(true),3000);
+  }else if(button.dataset.refreshing==='true'){
+    delete button.dataset.refreshing;
+    button.disabled=false;
+    button.textContent='지금 갱신';
+    if(status?.state==='success'){
+      try{await loadSnapshot()}catch(e){}
+      $('s').textContent=status.message||'자동 갱신이 완료되었습니다.';
+    }else if(status?.state==='failed'||status?.state==='interrupted'){
+      $('s').textContent=status.message||'자동 갱신에 실패했습니다.';
+    }
+  }
 }
 pollCrawlStatus();
 `;

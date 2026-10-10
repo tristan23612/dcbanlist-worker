@@ -26,11 +26,11 @@ function maxPages(env) {
   return Math.max(1, Math.min(100, Math.floor(value)));
 }
 
-export async function runDailyRefresh(env, { trigger = 'cron' } = {}) {
+export async function runDailyRefresh(env, { trigger = 'cron', runId = null } = {}) {
   const previous = await markStaleRunInterrupted(env);
-  if (previous?.state === 'running') return previous;
+  if (previous && ['queued', 'running'].includes(previous.state) && previous.runId !== runId) return previous;
   const startedAt = new Date().toISOString();
-  const base = { state: 'running', trigger, startedAt, galleries: [], message: '자동 갱신을 시작했습니다.' };
+  const base = { state: 'running', trigger, runId, startedAt, galleries: [], message: '자동 갱신을 시작했습니다.' };
   await writeRefreshStatus(env, base);
   try {
     const galleries = configuredGalleries(env);

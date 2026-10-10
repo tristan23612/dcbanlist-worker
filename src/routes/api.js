@@ -1,6 +1,6 @@
 import { apiResponse, hasBearerToken, readJson } from '../utils.js';
 import { getLatestData, ingestRecords, rebuildSnapshot } from '../storage/banLogsRepository.js';
-import { markStaleRunInterrupted } from '../storage/refreshStatusStore.js';
+import { markStaleRunInterrupted, writeRefreshStatus } from '../storage/refreshStatusStore.js';
 import { runDailyRefresh } from '../crawl/dailyUpdate.js';
 
 const SEARCH_HEADERS = ['닉네임', '식별코드', '게시글 / 댓글', '사유', '기간', '처리날짜', '처리자'];
@@ -58,9 +58,14 @@ export async function handleRefresh(request, env, ctx) {
 export async function handleManualCrawl(request, env, ctx) {
   if (!hasBearerToken(request, env.ADMIN_TOKEN)) return apiResponse({ status: 'error', message: 'unauthorized' });
   const current = await markStaleRunInterrupted(env);
-  if (current?.state === 'running') {
+  if (current && ['queued', 'running'].includes(current.state)) {
     return apiResponse({ status: 'running', message: '자동 갱신이 이미 진행 중입니다.' }, 409);
   }
-  ctx.waitUntil(runDailyRefresh(env, { trigger: 'manual' }));
-  return apiResponse({ status: 'started' }, 202);
+  const runId = crypto.randomUUID();
+  await writeRefreshStatus(env, {
+    state: 'queued', trigger: 'manual', runId, startedAt: new Date().toISOString(),
+    message: '수동 자동 갱신 요청을 접수했습니다. 작업을 시작합니다.',
+  });
+  ctx.waitUntil(runDailyRefresh(env, { trigger: 'manual', runId }));
+  return apiResponse({ status: 'started', runId }, 202);
 }
