@@ -28,6 +28,7 @@ function maxPages(env) {
 
 export async function runDailyRefresh(env, { trigger = 'cron' } = {}) {
   const previous = await markStaleRunInterrupted(env);
+  if (previous?.state === 'running') return previous;
   const startedAt = new Date().toISOString();
   const base = { state: 'running', trigger, startedAt, galleries: [], message: '자동 갱신을 시작했습니다.' };
   await writeRefreshStatus(env, base);

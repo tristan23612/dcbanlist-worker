@@ -1,5 +1,7 @@
 import { apiResponse, hasBearerToken, readJson } from '../utils.js';
 import { getLatestData, ingestRecords, rebuildSnapshot } from '../storage/banLogsRepository.js';
+import { markStaleRunInterrupted } from '../storage/refreshStatusStore.js';
+import { runDailyRefresh } from '../crawl/dailyUpdate.js';
 
 const SEARCH_HEADERS = ['닉네임', '식별코드', '게시글 / 댓글', '사유', '기간', '처리날짜', '처리자'];
 
@@ -51,4 +53,14 @@ export async function handleRefresh(request, env, ctx) {
   if (!hasBearerToken(request, env.INGEST_TOKEN)) return apiResponse({ status: 'error', message: 'unauthorized' });
   ctx.waitUntil(rebuildSnapshot(env));
   return apiResponse({ status: 'started' });
+}
+
+export async function handleManualCrawl(request, env, ctx) {
+  if (!hasBearerToken(request, env.ADMIN_TOKEN)) return apiResponse({ status: 'error', message: 'unauthorized' });
+  const current = await markStaleRunInterrupted(env);
+  if (current?.state === 'running') {
+    return apiResponse({ status: 'running', message: '자동 갱신이 이미 진행 중입니다.' }, 409);
+  }
+  ctx.waitUntil(runDailyRefresh(env, { trigger: 'manual' }));
+  return apiResponse({ status: 'started' }, 202);
 }

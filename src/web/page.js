@@ -74,14 +74,14 @@ tbody tr.row-enter{animation:row-enter .16s ease-out both}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;transition-duration:.3s!important}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}body,.c{transition-duration:.3s!important}.scope-menu,.scope-caret{transition-duration:.16s!important}}
 @media(max-width:600px){body{padding:8px}.c,.c.admin-wide{width:100%;max-width:none;padding:10px}.top{align-items:flex-start;flex-direction:column}.admin-actions{width:100%;flex-wrap:wrap}.admin-actions button{flex:1}.search{flex-wrap:wrap}.scope-picker{max-width:150px;flex:0 0 150px}.w{width:100%;margin:0}input{order:2;flex-basis:100%}}
 </style></head><body><div class="c">
-<div class="top"><h2>차단 기록 아카이브</h2><div class="admin-actions"><button id="theme" type="button">다크 모드</button><button id="apply" class="apply" style="display:none" disabled>갱신</button><button id="a">관리자 인증</button></div></div><div class="s" id="u"></div>
+<div class="top"><h2>차단 기록 아카이브</h2><div class="admin-actions"><button id="theme" type="button">다크 모드</button><button id="refreshNow" style="display:none">지금 갱신</button><button id="apply" class="apply" style="display:none" disabled>삭제 반영</button><button id="a">관리자 인증</button></div></div><div class="s" id="u"></div>
 <div class="search"><div class="scope-picker" id="scopePicker"><button type="button" id="scopeToggle" class="scope-toggle" aria-label="검색 범위" aria-haspopup="listbox" aria-expanded="false" aria-controls="scopeMenu"><span id="scopeLabel">전체</span><span class="scope-caret" aria-hidden="true"></span></button><div class="scope-menu" id="scopeMenu" role="listbox" aria-label="검색 범위"></div></div><select id="scope" aria-label="검색 범위" style="display:none"><option value="all">전체</option></select><input id="q" placeholder="검색..."><button id="copy">전체 복사</button></div>
 <div class="gallery-tabs" id="galleryTabs" role="tablist" aria-label="갤러리"></div>
 <div class="w"><table id="t"><colgroup id="cols"></colgroup><thead><tr id="h"></tr></thead><tbody id="b"></tbody></table></div>
 <div class="s" id="s">불러오는 중...</div>
 <button id="m" style="display:none">더 보기</button>
 </div><script>
-let rows=[],rowIds=[],columns=[],galleries=[],selectedGallery='',view=[],shown=0,lastRenderedIndices=[],lastRenderedIds=[],selectedRowIndex=null,adminToken='',pendingDelete=new Set();
+let rows=[],rowIds=[],columns=[],galleries=[],selectedGallery='',view=[],shown=0,lastRenderedIndices=[],lastRenderedIds=[],selectedRowIndex=null,adminToken='',pendingDelete=new Set(),applyingDeletes=false;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let savedTheme=null;
@@ -96,8 +96,14 @@ setTheme(initialTheme);
 $('theme').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
 function updateApplyButton(){
   $('apply').style.display=adminToken?'':'none';
-  $('apply').disabled=pendingDelete.size===0;
-  $('apply').textContent='갱신'+(pendingDelete.size?' ('+pendingDelete.size+')':'');
+  $('apply').disabled=applyingDeletes||pendingDelete.size===0;
+  $('apply').textContent=applyingDeletes?'삭제 및 갱신 중...':'삭제 반영'+(pendingDelete.size?' ('+pendingDelete.size+')':'');
+}
+function updateAdminUi(){
+  $('a').textContent=adminToken?'관리자 인증됨':'관리자 인증';
+  $('a').classList.toggle('admin-on',Boolean(adminToken));
+  $('refreshNow').style.display=adminToken?'':'none';
+  updateApplyButton();
 }
 function updateCopyButton(){
   $('copy').textContent=selectedRowIndex!==null&&view.includes(selectedRowIndex)?'선택 복사':'전체 복사';
@@ -205,7 +211,7 @@ function render(more,animateRows=false){
     const cells=rows[rowIndex].slice(1).map(v=>'<td title="'+esc(v)+'"><div class="cell-text"><span class="cell-value">'+esc(v)+'</span></div></td>').join('');
     const pending=adminToken&&pendingDelete.has(rowIds[rowIndex]);
     const selected=rowIndex===selectedRowIndex;
-    const deleteCell=adminToken&&rowIds[rowIndex]!=null?'<td class="admin-cell"><button class="del" data-index="'+rowIndex+'">'+(pending?'삭제 취소':'삭제 표시')+'</button></td>':'';
+    const deleteCell=adminToken&&rowIds[rowIndex]!=null?'<td class="admin-cell"><button class="del" data-index="'+rowIndex+'"'+(applyingDeletes?' disabled':'')+'>'+(pending?'삭제 취소':'삭제 표시')+'</button></td>':'';
     const rowClasses=[more||animateRows?'row-enter':'',pending?'pending-delete':'',selected?'row-selected':''].filter(Boolean).join(' ');
     out.push('<tr data-row-index="'+rowIndex+'" aria-selected="'+String(selected)+'"'+(rowClasses?' class="'+rowClasses+'"':'')+'>'+cells+deleteCell+'</tr>');
   }
@@ -234,7 +240,22 @@ async function loadSnapshot(){
   if(j.updatedAt)$('u').textContent='마지막 갱신: '+new Date(j.updatedAt).toLocaleString('ko-KR');
   filterRows(true);
 }
-loadSnapshot().catch(e=>{$('s').textContent='데이터 로드 실패: '+e.message});
+async function initializePage(){
+  try{await loadSnapshot()}catch(e){$('s').textContent='데이터 로드 실패: '+e.message;return}
+  let storedToken='';
+  try{storedToken=sessionStorage.getItem('dc-banlist-admin-token')||''}catch(e){}
+  if(!storedToken)return;
+  try{
+    const response=await fetch('/admin/verify',{method:'POST',headers:{Authorization:'Bearer '+storedToken}});
+    const result=await response.json();
+    if(!response.ok||result.status!=='success')throw new Error('관리자 토큰이 만료되었거나 올바르지 않습니다.');
+    adminToken=storedToken;updateAdminUi();await loadSnapshot();
+  }catch(e){
+    try{sessionStorage.removeItem('dc-banlist-admin-token')}catch(ignore){}
+    adminToken='';updateAdminUi();
+  }
+}
+initializePage();
 let t;
 $('q').oninput=()=>{clearTimeout(t);t=setTimeout(filterRows,150)};
 $('scope').onchange=filterRows;
@@ -263,20 +284,32 @@ $('copy').onclick=async()=>{
   catch(e){$('s').textContent='복사하지 못했습니다. 브라우저 클립보드 권한을 확인해주세요.'}
 };
 $('a').onclick=async()=>{
-  if(adminToken){adminToken='';pendingDelete.clear();$('a').textContent='관리자 인증';$('a').classList.remove('admin-on');render(false);return}
+  if(adminToken){adminToken='';pendingDelete.clear();try{sessionStorage.removeItem('dc-banlist-admin-token')}catch(e){}updateAdminUi();render(false);return}
   const token=prompt('관리자 토큰을 입력하세요.');
   if(!token)return;
   try{
     const r=await fetch('/admin/verify',{method:'POST',headers:{Authorization:'Bearer '+token}});
     const j=await r.json();
     if(!r.ok||j.status!=='success')throw new Error('관리자 인증에 실패했습니다.');
-    adminToken=token;$('a').textContent='관리자 인증됨';$('a').classList.add('admin-on');await loadSnapshot();
+    adminToken=token;try{sessionStorage.setItem('dc-banlist-admin-token',token)}catch(e){}updateAdminUi();await loadSnapshot();
   }catch(e){alert(e.message)}
+};
+$('refreshNow').onclick=async()=>{
+  if(!adminToken)return;
+  const button=$('refreshNow');button.disabled=true;button.textContent='갱신 요청 중...';$('s').textContent='자동 갱신을 요청하고 있습니다...';
+  try{
+    const response=await fetch('/admin/refresh',{method:'POST',headers:{Authorization:'Bearer '+adminToken}});
+    const result=await response.json();
+    if((!response.ok&&result.status!=='running')||!['started','running'].includes(result.status))throw new Error(result.message||'자동 갱신 요청에 실패했습니다.');
+    $('s').textContent=result.status==='running'?'이미 자동 갱신이 진행 중입니다.':'자동 갱신을 시작했습니다. 진행 상태를 확인하고 있습니다...';
+    if(typeof pollCrawlStatus==='function')pollCrawlStatus(true);
+  }catch(e){$('s').textContent=e.message}
+  finally{button.disabled=false;button.textContent='지금 갱신'}
 };
 $('b').onclick=async e=>{
   const button=e.target.closest('.del');
   if(button){
-    if(!adminToken)return;
+    if(!adminToken||applyingDeletes)return;
     const index=Number(button.dataset.index),id=rowIds[index];
     if(pendingDelete.has(id))pendingDelete.delete(id);else pendingDelete.add(id);
     const pending=pendingDelete.has(id);
@@ -302,15 +335,21 @@ $('apply').onclick=async()=>{
   if(!adminToken||pendingDelete.size===0)return;
   const ids=[...pendingDelete];
   if(!confirm(ids.length+'건을 DB에서 삭제하고 KV 스냅샷에 반영할까요?'))return;
-  $('apply').disabled=true;
+  applyingDeletes=true;updateApplyButton();
+  document.querySelectorAll('.del').forEach(button=>button.disabled=true);
+  $('s').textContent=ids.length+'건 삭제 및 KV 갱신 중...';
   try{
     const r=await fetch('/admin/delete',{method:'POST',headers:{Authorization:'Bearer '+adminToken,'Content-Type':'application/json'},body:JSON.stringify({ids})});
     const j=await r.json();
     if(!r.ok||j.status!=='success')throw new Error(j.message||'삭제에 실패했습니다.');
     const deletedIds=new Set(ids);
     for(let i=rowIds.length-1;i>=0;i--)if(deletedIds.has(rowIds[i])){rowIds.splice(i,1);rows.splice(i,1)}
-    pendingDelete.clear();selectedRowIndex=null;renderGalleryTabs();filterRows();$('s').textContent=(j.deleted||0)+'건을 삭제하고 스냅샷을 갱신했습니다.';
-  }catch(e){updateApplyButton();alert(e.message)}
+    pendingDelete.clear();selectedRowIndex=null;renderGalleryTabs();filterRows();$('s').textContent=(j.deleted||0)+'건을 삭제하고 KV 스냅샷을 갱신했습니다.';
+  }catch(e){$('s').textContent='삭제/갱신 실패: '+e.message}
+  finally{
+    applyingDeletes=false;updateApplyButton();
+    document.querySelectorAll('.del').forEach(button=>button.disabled=false);
+  }
 };
 </script></body></html>`;;
 

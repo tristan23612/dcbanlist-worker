@@ -20,11 +20,12 @@ async function showCrawlStatus(){
   }catch(e){}
 }
 let crawlStatusTimer;
-async function pollCrawlStatus(){
+async function pollCrawlStatus(keepPolling=false){
   clearTimeout(crawlStatusTimer);
   await showCrawlStatus();
   const el=$('crawl-status');
-  if(el.dataset.state==='running')crawlStatusTimer=setTimeout(pollCrawlStatus,15000);
+  if(el.dataset.state==='running')crawlStatusTimer=setTimeout(()=>pollCrawlStatus(false),15000);
+  else if(keepPolling)crawlStatusTimer=setTimeout(()=>pollCrawlStatus(true),5000);
 }
 pollCrawlStatus();
 `;
