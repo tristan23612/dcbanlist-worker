@@ -16,8 +16,8 @@ body{font-family:"Pretendard GOV",-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
 .c.admin-wide{width:1234px}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .admin-actions{display:flex;align-items:center;gap:8px}
-.admin-control{flex:0 1 auto;max-width:180px;opacity:1;transform:translateY(0);transition:max-width .3s ease,opacity .3s ease,transform .3s ease,padding .3s ease,border-width .3s ease}
-.admin-control.is-hidden{visibility:hidden;flex:0 0 0;max-width:0;padding-left:0;padding-right:0;border-width:0;opacity:0;transform:translateY(-4px);pointer-events:none;transition:max-width .3s ease,opacity .3s ease,transform .3s ease,padding .3s ease,border-width .3s ease,visibility 0s linear .3s}
+.admin-control{flex:0 1 auto;max-width:180px;margin-left:0;margin-right:0;opacity:1;transform:translateY(0);transition:max-width .3s ease,margin .3s ease,opacity .3s ease,transform .3s ease,padding .3s ease,border-width .3s ease}
+.admin-control.is-hidden{visibility:hidden;flex:0 0 0;max-width:0;margin-left:-4px;margin-right:-4px;padding-left:0;padding-right:0;border-width:0;opacity:0;transform:translateY(-4px);pointer-events:none;transition:max-width .3s ease,margin .3s ease,opacity .3s ease,transform .3s ease,padding .3s ease,border-width .3s ease,visibility 0s linear .3s}
 .search{display:flex;align-items:center;gap:8px;margin:12px 0}
 select,input{padding:10px;border:1px solid var(--border);border-radius:6px;font-size:14px;background:var(--surface);color:var(--text);transition:background-color .3s ease,border-color .3s ease,color .3s ease,box-shadow .18s ease}
 select{max-width:210px}
