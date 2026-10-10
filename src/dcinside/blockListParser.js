@@ -12,7 +12,7 @@ export function parseBlockListPage(html) {
     const paragraphs = nicknameCell.querySelectorAll('p').map(p => clean(p.text));
     const nonempty = paragraphs.filter(Boolean);
     const nickname = nonempty[0] || '';
-    const idText = nonempty[1] || '';
+    const idText = (nonempty[1] || '').replace(/\s*\+\s*IP\s*$/i, '').trim();
     const identifier = idText.replace(/^\(/, '').replace(/\)$/, '').trim() +
       (nicknameCell.querySelector('.txtip') ? ' + IP' : '');
 
