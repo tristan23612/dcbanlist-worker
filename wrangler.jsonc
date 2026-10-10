@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dcbanlist",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-10",
+  "workers_dev": true,
+  "triggers": {
+    "crons": ["17 20 * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dcbanlist",
+      "database_id": "a7349479-d35a-401a-8f2a-e122e380b760"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "dcbanlist"
+    }
+  ],
+  "vars": {
+    "GALLERIES_JSON": "[onshinproject]",
+    "MAX_CRAWL_PAGES": "20",
+    "MAX_CRAWL_GALLERIES": "10"
+  }
+}

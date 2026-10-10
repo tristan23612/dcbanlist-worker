@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS ban_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  gallery_id TEXT NOT NULL,
+  nickname TEXT NOT NULL DEFAULT '',
+  identifier TEXT NOT NULL DEFAULT '',
+  content TEXT NOT NULL DEFAULT '',
+  reason TEXT NOT NULL DEFAULT '',
+  duration TEXT NOT NULL DEFAULT '',
+  date_time TEXT NOT NULL DEFAULT '',
+  manager TEXT NOT NULL DEFAULT ''
+);
