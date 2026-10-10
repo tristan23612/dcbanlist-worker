@@ -16,6 +16,8 @@ body{font-family:"Pretendard GOV",-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
 .c.admin-wide{width:1234px}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .admin-actions{display:flex;align-items:center;gap:8px}
+.admin-control{flex:0 1 auto;max-width:180px;opacity:1;transform:translateY(0);transition:max-width .3s ease,opacity .3s ease,transform .3s ease,padding .3s ease,border-width .3s ease}
+.admin-control.is-hidden{visibility:hidden;flex:0 0 0;max-width:0;padding-left:0;padding-right:0;border-width:0;opacity:0;transform:translateY(-4px);pointer-events:none;transition:max-width .3s ease,opacity .3s ease,transform .3s ease,padding .3s ease,border-width .3s ease,visibility 0s linear .3s}
 .search{display:flex;align-items:center;gap:8px;margin:12px 0}
 select,input{padding:10px;border:1px solid var(--border);border-radius:6px;font-size:14px;background:var(--surface);color:var(--text);transition:background-color .3s ease,border-color .3s ease,color .3s ease,box-shadow .18s ease}
 select{max-width:210px}
@@ -74,7 +76,7 @@ tbody tr.row-enter{animation:row-enter .16s ease-out both}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;transition-duration:.3s!important}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}body,.c{transition-duration:.3s!important}.scope-menu,.scope-caret{transition-duration:.16s!important}}
 @media(max-width:600px){body{padding:8px}.c,.c.admin-wide{width:100%;max-width:none;padding:10px}.top{align-items:flex-start;flex-direction:column}.admin-actions{width:100%;flex-wrap:wrap}.admin-actions button{flex:1}.search{flex-wrap:wrap}.scope-picker{max-width:150px;flex:0 0 150px}.w{width:100%;margin:0}input{order:2;flex-basis:100%}}
 </style></head><body><div class="c">
-<div class="top"><h2>차단 기록 아카이브</h2><div class="admin-actions"><button id="theme" type="button">다크 모드</button><button id="refreshNow" style="display:none">지금 갱신</button><button id="apply" class="apply" style="display:none" disabled>삭제 반영</button><button id="a">관리자 인증</button></div></div><div class="s" id="u"></div>
+<div class="top"><h2>차단 기록 아카이브</h2><div class="admin-actions"><button id="theme" type="button">다크 모드</button><button id="refreshNow" class="admin-control is-hidden" aria-hidden="true" tabindex="-1">지금 갱신</button><button id="apply" class="apply admin-control is-hidden" aria-hidden="true" tabindex="-1" disabled>삭제 반영</button><button id="a">관리자 인증</button></div></div><div class="s" id="u"></div>
 <div class="search"><div class="scope-picker" id="scopePicker"><button type="button" id="scopeToggle" class="scope-toggle" aria-label="검색 범위" aria-haspopup="listbox" aria-expanded="false" aria-controls="scopeMenu"><span id="scopeLabel">전체</span><span class="scope-caret" aria-hidden="true"></span></button><div class="scope-menu" id="scopeMenu" role="listbox" aria-label="검색 범위"></div></div><select id="scope" aria-label="검색 범위" style="display:none"><option value="all">전체</option></select><input id="q" placeholder="검색..."><button id="copy">전체 복사</button></div>
 <div class="gallery-tabs" id="galleryTabs" role="tablist" aria-label="갤러리"></div>
 <div class="w"><table id="t"><colgroup id="cols"></colgroup><thead><tr id="h"></tr></thead><tbody id="b"></tbody></table></div>
@@ -95,14 +97,18 @@ function setTheme(theme){
 setTheme(initialTheme);
 $('theme').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
 function updateApplyButton(){
-  $('apply').style.display=adminToken?'':'none';
+  $('apply').classList.toggle('is-hidden',!adminToken);
+  $('apply').setAttribute('aria-hidden',String(!adminToken));
+  $('apply').tabIndex=adminToken?0:-1;
   $('apply').disabled=applyingDeletes||pendingDelete.size===0;
   $('apply').textContent=applyingDeletes?'삭제 및 갱신 중...':'삭제 반영'+(pendingDelete.size?' ('+pendingDelete.size+')':'');
 }
 function updateAdminUi(){
   $('a').textContent=adminToken?'관리자 인증됨':'관리자 인증';
   $('a').classList.toggle('admin-on',Boolean(adminToken));
-  $('refreshNow').style.display=adminToken?'':'none';
+  $('refreshNow').classList.toggle('is-hidden',!adminToken);
+  $('refreshNow').setAttribute('aria-hidden',String(!adminToken));
+  $('refreshNow').tabIndex=adminToken?0:-1;
   updateApplyButton();
 }
 function updateCopyButton(){
@@ -205,7 +211,7 @@ function render(more,animateRows=false){
   $('cols').innerHTML=columns.slice(1).map((_,i)=>'<col style="width:'+(widths[i]||140)+'px">').join('')+(hasAdminColumn?'<col style="width:100px">':'');
   $('t').style.width=(widths.slice(0,columns.length-1).reduce((sum,width)=>sum+width,0)+(hasAdminColumn?100:0))+'px';
   $('h').innerHTML=columns.slice(1).map(k=>'<th title="'+esc(k)+'">'+esc(k)+'</th>').join('')+(hasAdminColumn?'<th>관리</th>':'');
-  const end=Math.min(shown+200,view.length),out=[];
+  const end=Math.min(shown+100,view.length),out=[];
   for(let i=shown;i<end;i++){
     const rowIndex=view[i];
     const cells=rows[rowIndex].slice(1).map(v=>'<td title="'+esc(v)+'"><div class="cell-text"><span class="cell-value">'+esc(v)+'</span></div></td>').join('');
