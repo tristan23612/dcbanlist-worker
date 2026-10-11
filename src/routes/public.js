@@ -15,6 +15,20 @@ const crawlDetailsPanel=crawlDetailsDisclosure.querySelector('.crawl-details-pan
   crawlDetailsPanel.setAttribute('aria-hidden',String(!open));
   crawlDetailsPanel.inert=!open;
   crawlDetailsDisclosure.classList.toggle('details-open',open);
+  if(open){
+    crawlDetailsPanel.style.height='0px';
+    crawlDetailsPanel.offsetHeight;
+    crawlDetailsPanel.style.height=crawlDetailsPanel.scrollHeight+'px';
+  }else{
+    crawlDetailsPanel.style.height=crawlDetailsPanel.getBoundingClientRect().height+'px';
+    crawlDetailsPanel.offsetHeight;
+    crawlDetailsPanel.style.height='0px';
+  }
+});
+crawlDetailsPanel.addEventListener('transitionend',event=>{
+  if(event.target===crawlDetailsPanel&&event.propertyName==='height'&&crawlDetailsToggle.getAttribute('aria-expanded')==='true'){
+    crawlDetailsPanel.style.height='auto';
+  }
 });
 function formatRefreshTime(value){
   const date=new Date(value);

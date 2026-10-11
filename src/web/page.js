@@ -78,9 +78,9 @@ tbody tr:hover{background:var(--button-hover)}
 .refresh-summary .crawl-details-toggle:hover,.refresh-summary .crawl-details-toggle:active{background:transparent;box-shadow:none;transform:none}
 .crawl-details-toggle::before{content:"";display:inline-block;width:0;height:0;margin:0 6px 2px 1px;border-top:4px solid transparent;border-bottom:4px solid transparent;border-left:5px solid currentColor;transition:transform .24s ease}
 .refresh-summary.details-open .crawl-details-toggle::before{transform:rotate(90deg)}
-.crawl-details-panel{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .24s ease,opacity .18s ease}
-.refresh-summary.details-open .crawl-details-panel{grid-template-rows:1fr;opacity:1}
-.crawl-details-panel #crawl-details{min-height:0;overflow:hidden;display:grid;grid-template-columns:max-content 1fr;gap:3px 14px;margin-top:8px}
+.crawl-details-panel{height:0;overflow:hidden;opacity:0;transition:height .24s ease,opacity .18s ease}
+.refresh-summary.details-open .crawl-details-panel{opacity:1}
+.crawl-details-panel #crawl-details{display:grid;grid-template-columns:max-content 1fr;gap:3px 14px;margin-top:8px}
 #crawl-details dt{font-weight:600;color:var(--text)}
 #crawl-details dd{min-width:0;overflow-wrap:anywhere}
 tbody tr{border-bottom:1px solid var(--border);transition:background-color .3s ease,border-color .3s ease}
