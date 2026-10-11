@@ -3,32 +3,18 @@ import { HTML } from '../web/page.js';
 import { markStaleRunInterrupted } from '../storage/refreshStatusStore.js';
 
 function pageWithStatus() {
-  const statusMarkup = '<section class="refresh-summary" id="crawl-status" style="display:none"><div id="crawl-message"></div><details><summary>세부 정보</summary><div class="crawl-details-panel"><dl id="crawl-details"></dl></div></details></section>';
+  const statusMarkup = '<section class="refresh-summary" id="crawl-status" style="display:none"><div id="crawl-message"></div><div class="crawl-disclosure"><button type="button" class="crawl-details-toggle" aria-expanded="false" aria-controls="crawl-details-panel">세부 정보</button><div class="crawl-details-panel" id="crawl-details-panel" aria-hidden="true" inert><dl id="crawl-details"></dl></div></div></section>';
   const script = `
 let crawlDetailsSignature='';
-const crawlDetailsDisclosure=$('crawl-status').querySelector('details');
+const crawlDetailsDisclosure=$('crawl-status');
+const crawlDetailsToggle=crawlDetailsDisclosure.querySelector('.crawl-details-toggle');
 const crawlDetailsPanel=crawlDetailsDisclosure.querySelector('.crawl-details-panel');
-let crawlDetailsCloseTimer;
-crawlDetailsDisclosure.querySelector('summary').addEventListener('click',event=>{
-  event.preventDefault();
-  clearTimeout(crawlDetailsCloseTimer);
-  if(crawlDetailsDisclosure.open){
-    crawlDetailsPanel.classList.add('is-closing');
-    crawlDetailsCloseTimer=setTimeout(()=>{
-      crawlDetailsDisclosure.open=false;
-      crawlDetailsPanel.classList.remove('is-closing');
-    },250);
-  }else{
-    crawlDetailsDisclosure.open=true;
-    crawlDetailsPanel.classList.remove('is-closing');
-  }
-});
- crawlDetailsPanel.addEventListener('transitionend',event=>{
-  if(event.target===crawlDetailsPanel&&event.propertyName==='grid-template-rows'&&crawlDetailsPanel.classList.contains('is-closing')){
-    clearTimeout(crawlDetailsCloseTimer);
-    crawlDetailsDisclosure.open=false;
-    crawlDetailsPanel.classList.remove('is-closing');
-  }
+ crawlDetailsToggle.addEventListener('click',()=>{
+  const open=crawlDetailsToggle.getAttribute('aria-expanded')!=='true';
+  crawlDetailsToggle.setAttribute('aria-expanded',String(open));
+  crawlDetailsPanel.setAttribute('aria-hidden',String(!open));
+  crawlDetailsPanel.inert=!open;
+  crawlDetailsDisclosure.classList.toggle('details-open',open);
 });
 function formatRefreshTime(value){
   const date=new Date(value);

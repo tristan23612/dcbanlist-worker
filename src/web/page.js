@@ -69,13 +69,17 @@ td{height:38px;vertical-align:middle}
 tbody tr:hover{background:var(--button-hover)}
 .pending-delete:hover{background:var(--danger-bg)}
 .s{font-size:12px;color:var(--muted);margin-top:8px;transition:color .3s ease}
+#u{min-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .refresh-summary{margin:4px 0 8px;padding:8px 10px;border:1px solid var(--border);border-left:3px solid var(--border);border-radius:6px;background:var(--header);font-size:12px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere;transition:background-color .3s ease,border-color .3s ease,color .3s ease}
 .refresh-summary[data-state="running"],.refresh-summary[data-state="queued"]{border-left-color:var(--focus)}
 .refresh-summary[data-state="failed"],.refresh-summary[data-state="interrupted"]{border-left-color:var(--danger-text)}
-.refresh-summary details{margin-top:4px}
-.refresh-summary summary{width:max-content;cursor:pointer;user-select:none}
+.crawl-disclosure{margin-top:4px}
+.refresh-summary .crawl-details-toggle{display:block;width:max-content;padding:0;border:0;background:transparent;color:inherit;text-align:left;white-space:normal;box-shadow:none;transform:none}
+.refresh-summary .crawl-details-toggle:hover,.refresh-summary .crawl-details-toggle:active{background:transparent;box-shadow:none;transform:none}
+.crawl-details-toggle::before{content:"";display:inline-block;width:0;height:0;margin:0 6px 2px 1px;border-top:4px solid transparent;border-bottom:4px solid transparent;border-left:5px solid currentColor;transition:transform .24s ease}
+.refresh-summary.details-open .crawl-details-toggle::before{transform:rotate(90deg)}
 .crawl-details-panel{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .24s ease,opacity .18s ease}
-.refresh-summary details[open] .crawl-details-panel:not(.is-closing){grid-template-rows:1fr;opacity:1}
+.refresh-summary.details-open .crawl-details-panel{grid-template-rows:1fr;opacity:1}
 .crawl-details-panel #crawl-details{min-height:0;overflow:hidden;display:grid;grid-template-columns:max-content 1fr;gap:3px 14px;margin-top:8px}
 #crawl-details dt{font-weight:600;color:var(--text)}
 #crawl-details dd{min-width:0;overflow-wrap:anywhere}
@@ -83,10 +87,10 @@ tbody tr{border-bottom:1px solid var(--border);transition:background-color .3s e
 tbody tr.row-enter{animation:row-enter .16s ease-out both}
 @keyframes row-enter{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 @keyframes delete-mark{from{opacity:1}to{opacity:.6}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;transition-duration:.3s!important}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}body,.c{transition-duration:.3s!important}.scope-menu,.scope-caret{transition-duration:.16s!important}.crawl-details-panel{transition-duration:.01ms!important}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;transition-duration:.3s!important}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}body,.c{transition-duration:.3s!important}.scope-menu,.scope-caret{transition-duration:.16s!important}.crawl-details-panel,.crawl-details-toggle::before{transition-duration:.01ms!important}}
 @media(max-width:600px){body{padding:8px}.c,.c.admin-wide{width:100%;max-width:none;padding:10px}.top{align-items:flex-start;flex-direction:column}.admin-actions{width:100%;flex-wrap:wrap}.admin-actions button{flex:1}.search{flex-wrap:wrap}.scope-picker{max-width:150px;flex:0 0 150px}.w{width:100%;margin:0}input{order:2;flex-basis:100%}}
 </style></head><body><div class="c">
-<div class="top"><h2>차단 기록 아카이브</h2><div class="admin-actions"><button id="theme" type="button">다크 모드</button><button id="manualRefresh" class="admin-control is-hidden" aria-hidden="true" tabindex="-1">수동 갱신</button><button id="apply" class="apply admin-control is-hidden" aria-hidden="true" tabindex="-1" disabled>삭제 반영</button><button id="a">관리자 인증</button></div></div><div class="s" id="u"></div>
+<div class="top"><h2>차단 기록 아카이브</h2><div class="admin-actions"><button id="theme" type="button">다크 모드</button><button id="manualRefresh" class="admin-control is-hidden" aria-hidden="true" tabindex="-1">수동 갱신</button><button id="apply" class="apply admin-control is-hidden" aria-hidden="true" tabindex="-1" disabled>삭제 반영</button><button id="a">관리자 인증</button></div></div><div class="s" id="u">마지막 데이터 갱신: 불러오는 중...</div>
 <div class="search"><div class="scope-picker" id="scopePicker"><button type="button" id="scopeToggle" class="scope-toggle" aria-label="검색 범위" aria-haspopup="listbox" aria-expanded="false" aria-controls="scopeMenu"><span id="scopeLabel">전체</span><span class="scope-caret" aria-hidden="true"></span></button><div class="scope-menu" id="scopeMenu" role="listbox" aria-label="검색 범위"></div></div><select id="scope" aria-label="검색 범위" style="display:none"><option value="all">전체</option></select><input id="q" placeholder="검색..."><button id="copy">전체 복사</button></div>
 <div class="gallery-tabs" id="galleryTabs" role="tablist" aria-label="갤러리"></div>
 <div class="w"><table id="t"><colgroup id="cols"></colgroup><thead><tr id="h"></tr></thead><tbody id="b"></tbody></table></div>
@@ -253,11 +257,13 @@ async function loadSnapshot(){
   $('scope').innerHTML='<option value="all">전체</option>'+columns.slice(1).map((k,i)=>'<option value="'+i+'">'+esc(k)+'</option>').join('');
   $('scopeMenu').innerHTML='<button type="button" class="scope-option" role="option" aria-selected="false" data-value="all">전체</button>'+columns.slice(1).map((k,i)=>'<button type="button" class="scope-option" role="option" aria-selected="false" data-value="'+i+'">'+esc(k)+'</button>').join('');
   updateScopeSelection('all');
-  if(j.updatedAt)$('u').textContent='마지막 데이터 갱신: '+new Date(j.updatedAt).toLocaleString('ko-KR');
+  $('u').textContent=j.updatedAt
+    ?'마지막 데이터 갱신: '+new Date(j.updatedAt).toLocaleString('ko-KR')
+    :'마지막 데이터 갱신: 기록 없음';
   filterRows(true);
 }
 async function initializePage(){
-  try{await loadSnapshot()}catch(e){$('s').textContent='데이터 로드 실패: '+e.message;return}
+  try{await loadSnapshot()}catch(e){$('u').textContent='마지막 데이터 갱신: 확인 불가';$('s').textContent='데이터 로드 실패: '+e.message;return}
   let storedToken='';
   try{storedToken=sessionStorage.getItem('dc-banlist-admin-token')||''}catch(e){}
   if(!storedToken)return;
