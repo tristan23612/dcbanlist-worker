@@ -2,7 +2,7 @@ import { CORS, SEC } from './constants.js';
 import { apiResponse } from './utils.js';
 import { handlePublicGet } from './routes/public.js';
 import { handleAdmin } from './routes/admin.js';
-import { handleAppApi, handleManualCrawl, handleRefresh } from './routes/api.js';
+import { handleAppApi, handleManualRefresh, handleRefresh } from './routes/api.js';
 import { runDailyRefresh } from './crawl/dailyUpdate.js';
 
 export default {
@@ -22,7 +22,7 @@ export default {
         if (response) return response;
       }
       if (path === '/refresh') return handleRefresh(request, env, ctx);
-      if (path === '/admin/refresh') return handleManualCrawl(request, env, ctx);
+      if (path === '/admin/manual-refresh') return handleManualRefresh(request, env, ctx);
       if (path === '/') return handleAppApi(request, env);
     }
 

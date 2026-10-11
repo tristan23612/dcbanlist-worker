@@ -69,6 +69,14 @@ td{height:38px;vertical-align:middle}
 tbody tr:hover{background:var(--button-hover)}
 .pending-delete:hover{background:var(--danger-bg)}
 .s{font-size:12px;color:var(--muted);margin-top:8px;transition:color .3s ease}
+.refresh-summary{margin:4px 0 8px;padding:8px 10px;border:1px solid var(--border);border-left:3px solid var(--border);border-radius:6px;background:var(--header);font-size:12px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere;transition:background-color .3s ease,border-color .3s ease,color .3s ease}
+.refresh-summary[data-state="running"],.refresh-summary[data-state="queued"]{border-left-color:var(--focus)}
+.refresh-summary[data-state="failed"],.refresh-summary[data-state="interrupted"]{border-left-color:var(--danger-text)}
+.refresh-summary details{margin-top:4px}
+.refresh-summary summary{width:max-content;cursor:pointer;user-select:none}
+#crawl-details{display:grid;grid-template-columns:max-content 1fr;gap:3px 14px;margin-top:8px}
+#crawl-details dt{font-weight:600;color:var(--text)}
+#crawl-details dd{min-width:0;overflow-wrap:anywhere}
 tbody tr{border-bottom:1px solid var(--border);transition:background-color .3s ease,border-color .3s ease}
 tbody tr.row-enter{animation:row-enter .16s ease-out both}
 @keyframes row-enter{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
@@ -76,7 +84,7 @@ tbody tr.row-enter{animation:row-enter .16s ease-out both}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;transition-duration:.3s!important}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}body,.c{transition-duration:.3s!important}.scope-menu,.scope-caret{transition-duration:.16s!important}}
 @media(max-width:600px){body{padding:8px}.c,.c.admin-wide{width:100%;max-width:none;padding:10px}.top{align-items:flex-start;flex-direction:column}.admin-actions{width:100%;flex-wrap:wrap}.admin-actions button{flex:1}.search{flex-wrap:wrap}.scope-picker{max-width:150px;flex:0 0 150px}.w{width:100%;margin:0}input{order:2;flex-basis:100%}}
 </style></head><body><div class="c">
-<div class="top"><h2>차단 기록 아카이브</h2><div class="admin-actions"><button id="theme" type="button">다크 모드</button><button id="refreshNow" class="admin-control is-hidden" aria-hidden="true" tabindex="-1">지금 갱신</button><button id="apply" class="apply admin-control is-hidden" aria-hidden="true" tabindex="-1" disabled>삭제 반영</button><button id="a">관리자 인증</button></div></div><div class="s" id="u"></div>
+<div class="top"><h2>차단 기록 아카이브</h2><div class="admin-actions"><button id="theme" type="button">다크 모드</button><button id="manualRefresh" class="admin-control is-hidden" aria-hidden="true" tabindex="-1">수동 갱신</button><button id="apply" class="apply admin-control is-hidden" aria-hidden="true" tabindex="-1" disabled>삭제 반영</button><button id="a">관리자 인증</button></div></div><div class="s" id="u"></div>
 <div class="search"><div class="scope-picker" id="scopePicker"><button type="button" id="scopeToggle" class="scope-toggle" aria-label="검색 범위" aria-haspopup="listbox" aria-expanded="false" aria-controls="scopeMenu"><span id="scopeLabel">전체</span><span class="scope-caret" aria-hidden="true"></span></button><div class="scope-menu" id="scopeMenu" role="listbox" aria-label="검색 범위"></div></div><select id="scope" aria-label="검색 범위" style="display:none"><option value="all">전체</option></select><input id="q" placeholder="검색..."><button id="copy">전체 복사</button></div>
 <div class="gallery-tabs" id="galleryTabs" role="tablist" aria-label="갤러리"></div>
 <div class="w"><table id="t"><colgroup id="cols"></colgroup><thead><tr id="h"></tr></thead><tbody id="b"></tbody></table></div>
@@ -106,9 +114,9 @@ function updateApplyButton(){
 function updateAdminUi(){
   $('a').textContent=adminToken?'관리자 인증됨':'관리자 인증';
   $('a').classList.toggle('admin-on',Boolean(adminToken));
-  $('refreshNow').classList.toggle('is-hidden',!adminToken);
-  $('refreshNow').setAttribute('aria-hidden',String(!adminToken));
-  $('refreshNow').tabIndex=adminToken?0:-1;
+  $('manualRefresh').classList.toggle('is-hidden',!adminToken);
+  $('manualRefresh').setAttribute('aria-hidden',String(!adminToken));
+  $('manualRefresh').tabIndex=adminToken?0:-1;
   updateApplyButton();
 }
 function updateCopyButton(){
@@ -243,7 +251,7 @@ async function loadSnapshot(){
   $('scope').innerHTML='<option value="all">전체</option>'+columns.slice(1).map((k,i)=>'<option value="'+i+'">'+esc(k)+'</option>').join('');
   $('scopeMenu').innerHTML='<button type="button" class="scope-option" role="option" aria-selected="false" data-value="all">전체</button>'+columns.slice(1).map((k,i)=>'<button type="button" class="scope-option" role="option" aria-selected="false" data-value="'+i+'">'+esc(k)+'</button>').join('');
   updateScopeSelection('all');
-  if(j.updatedAt)$('u').textContent='마지막 갱신: '+new Date(j.updatedAt).toLocaleString('ko-KR');
+  if(j.updatedAt)$('u').textContent='마지막 데이터 갱신: '+new Date(j.updatedAt).toLocaleString('ko-KR');
   filterRows(true);
 }
 async function initializePage(){
@@ -300,16 +308,16 @@ $('a').onclick=async()=>{
     adminToken=token;try{sessionStorage.setItem('dc-banlist-admin-token',token)}catch(e){}updateAdminUi();await loadSnapshot();
   }catch(e){alert(e.message)}
 };
-$('refreshNow').onclick=async()=>{
+$('manualRefresh').onclick=async()=>{
   if(!adminToken)return;
-  const button=$('refreshNow');button.dataset.refreshing='true';button.disabled=true;button.textContent='갱신 요청 전송 중...';$('s').textContent='자동 갱신 요청을 전송하고 있습니다...';
+  const button=$('manualRefresh');button.dataset.refreshing='true';button.disabled=true;button.textContent='수동 갱신 요청 중...';$('s').textContent='수동 갱신 요청을 전송하고 있습니다...';
   try{
-    const response=await fetch('/admin/refresh',{method:'POST',headers:{Authorization:'Bearer '+adminToken}});
+    const response=await fetch('/admin/manual-refresh',{method:'POST',headers:{Authorization:'Bearer '+adminToken}});
     const result=await response.json();
-    if((!response.ok&&result.status!=='running')||!['started','running'].includes(result.status))throw new Error(result.message||'자동 갱신 요청에 실패했습니다.');
-    $('s').textContent=result.status==='running'?'이미 자동 갱신이 진행 중입니다.':'자동 갱신을 시작했습니다. 진행 상태를 확인하고 있습니다...';
-    if(typeof pollCrawlStatus==='function')pollCrawlStatus(true);
-  }catch(e){delete button.dataset.refreshing;button.disabled=false;button.textContent='지금 갱신';$('s').textContent=e.message}
+    if((!response.ok&&result.status!=='running')||!['started','running'].includes(result.status))throw new Error(result.message||'수동 갱신 요청에 실패했습니다.');
+    $('s').textContent=result.status==='running'?result.message:'수동 갱신을 시작했습니다. 진행 상태를 확인하고 있습니다...';
+    if(typeof pollCrawlStatus==='function')pollCrawlStatus(true,3000);
+  }catch(e){delete button.dataset.refreshing;button.disabled=false;button.textContent='수동 갱신';$('s').textContent=e.message}
 };
 $('b').onclick=async e=>{
   const button=e.target.closest('.del');

@@ -55,16 +55,17 @@ export async function handleRefresh(request, env, ctx) {
   return apiResponse({ status: 'started' });
 }
 
-export async function handleManualCrawl(request, env, ctx) {
+export async function handleManualRefresh(request, env, ctx) {
   if (!hasBearerToken(request, env.ADMIN_TOKEN)) return apiResponse({ status: 'error', message: 'unauthorized' });
   const current = await markStaleRunInterrupted(env);
   if (current && ['queued', 'running'].includes(current.state)) {
-    return apiResponse({ status: 'running', message: '자동 갱신이 이미 진행 중입니다.' }, 409);
+    const label = current.trigger === 'manual' ? '수동 갱신' : '자동 갱신';
+    return apiResponse({ status: 'running', message: `${label}이 이미 진행 중입니다.` }, 409);
   }
   const runId = crypto.randomUUID();
   await writeRefreshStatus(env, {
     state: 'queued', trigger: 'manual', runId, startedAt: new Date().toISOString(),
-    message: '수동 자동 갱신 요청을 접수했습니다. 작업을 시작합니다.',
+    stage: 'queued', logs: [], message: '수동 갱신 요청을 접수했습니다. 작업을 시작합니다.',
   });
   ctx.waitUntil(runDailyRefresh(env, { trigger: 'manual', runId }));
   return apiResponse({ status: 'started', runId }, 202);
