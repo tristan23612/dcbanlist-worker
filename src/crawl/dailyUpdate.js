@@ -1,6 +1,6 @@
 import { createBlockListClient } from '../dcinside/blockListClient.js';
 import { parseBlockListPage, isSameEntry } from '../dcinside/blockListParser.js';
-import { getLatestData, ingestGalleryRecords, rebuildSnapshot } from '../storage/banLogsRepository.js';
+import { getLatestData, ingestGalleryRecords, rebuildSnapshotAndPurgeCache } from '../storage/banLogsRepository.js';
 import { logRefreshEvent, markStaleRunInterrupted, writeRefreshStatus } from '../storage/refreshStatusStore.js';
 import { safeError } from '../utils.js';
 
@@ -26,7 +26,7 @@ function maxPages(env) {
   return Math.max(1, Math.min(100, Math.floor(value)));
 }
 
-export async function runDailyRefresh(env, { trigger = 'cron', runId = null } = {}) {
+export async function runDailyRefresh(env, { trigger = 'cron', runId = null, ctx } = {}) {
   const refreshLabel = trigger === 'manual' ? '수동 갱신' : '자동 갱신';
   const previous = await markStaleRunInterrupted(env);
   if (previous && ['queued', 'running'].includes(previous.state) && previous.runId !== runId) {
@@ -148,8 +148,8 @@ export async function runDailyRefresh(env, { trigger = 'cron', runId = null } = 
     base.message = 'KV 스냅샷을 갱신하고 있습니다.';
     logRefreshEvent(base, 'info', 'snapshot_rebuild_started', base.message);
     await writeRefreshStatus(env, base);
-    const snapshotRows = await rebuildSnapshot(env);
-    base.snapshot = { status: 'updated', rows: snapshotRows };
+    const snapshotRows = await rebuildSnapshotAndPurgeCache(env, ctx);
+    base.snapshot = { status: 'updated', rows: snapshotRows, cachePurged: true };
     logRefreshEvent(base, 'info', 'snapshot_rebuild_completed', `KV 스냅샷 갱신을 완료했습니다. ${snapshotRows}건입니다.`, {
       rows: snapshotRows,
     });
@@ -164,7 +164,9 @@ export async function runDailyRefresh(env, { trigger = 'cron', runId = null } = 
     return completed;
   } catch (error) {
     const message = base.stage === 'snapshot'
-      ? `DB 저장은 완료했지만 KV 스냅샷 갱신에 실패했습니다: ${safeError(error)}`
+      ? error.snapshotUpdated
+        ? `KV 스냅샷은 갱신됐지만 캐시 비우기에 실패했습니다: ${safeError(error)}`
+        : `DB 저장은 완료했지만 KV 스냅샷 갱신에 실패했습니다: ${safeError(error)}`
       : base.stage === 'database'
         ? `DB 저장에 실패했습니다: ${safeError(error)}`
         : safeError(error);
@@ -177,7 +179,11 @@ export async function runDailyRefresh(env, { trigger = 'cron', runId = null } = 
       }],
     };
     if (base.stage === 'database') failed.database = { status: 'failed', inserted: null };
-    if (base.stage === 'snapshot') failed.snapshot = { status: 'failed' };
+    if (base.stage === 'snapshot') {
+      failed.snapshot = error.snapshotUpdated
+        ? { status: 'updated', rows: error.snapshotRows, cachePurged: false }
+        : { status: 'failed' };
+    }
     logRefreshEvent(failed, 'error', 'run_failed', message, { durationMs: failed.durationMs, stage: base.stage });
     await writeRefreshStatus(env, failed);
     return failed;

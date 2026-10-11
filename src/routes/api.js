@@ -1,5 +1,5 @@
 import { apiResponse, hasBearerToken, readJson } from '../utils.js';
-import { getLatestData, ingestRecords, rebuildSnapshot } from '../storage/banLogsRepository.js';
+import { getLatestData, ingestRecords, rebuildSnapshotAndPurgeCache } from '../storage/banLogsRepository.js';
 import { markStaleRunInterrupted, writeRefreshStatus } from '../storage/refreshStatusStore.js';
 import { runDailyRefresh } from '../crawl/dailyUpdate.js';
 
@@ -22,7 +22,7 @@ async function searchIdentifier(body, env) {
   };
 }
 
-export async function handleAppApi(request, env) {
+export async function handleAppApi(request, env, ctx) {
   let body;
   try { body = await readJson(request); }
   catch (error) { return apiResponse({ status: 'error', message: error.message }); }
@@ -35,7 +35,7 @@ export async function handleAppApi(request, env) {
       const gid = String(body.galleryId || '').trim();
       if (!gid || !Array.isArray(body.banList)) throw new Error('There is an empty data');
       const refresh = (request.headers.get('X-Refresh-Snapshot') || '').trim().toLowerCase() === 'true';
-      return apiResponse(await ingestRecords(gid, body.banList, env, refresh));
+      return apiResponse(await ingestRecords(gid, body.banList, env, refresh, ctx));
     }
     if (action === 'getLatestData') {
       const gid = String(body.galleryId || '').trim();
@@ -51,7 +51,7 @@ export async function handleAppApi(request, env) {
 
 export async function handleRefresh(request, env, ctx) {
   if (!hasBearerToken(request, env.INGEST_TOKEN)) return apiResponse({ status: 'error', message: 'unauthorized' });
-  ctx.waitUntil(rebuildSnapshot(env));
+  ctx.waitUntil(rebuildSnapshotAndPurgeCache(env, ctx));
   return apiResponse({ status: 'started' });
 }
 
@@ -67,6 +67,6 @@ export async function handleManualRefresh(request, env, ctx) {
     state: 'queued', trigger: 'manual', runId, startedAt: new Date().toISOString(),
     stage: 'queued', logs: [], message: '수동 갱신 요청을 접수했습니다. 작업을 시작합니다.',
   });
-  ctx.waitUntil(runDailyRefresh(env, { trigger: 'manual', runId }));
+  ctx.waitUntil(runDailyRefresh(env, { trigger: 'manual', runId, ctx }));
   return apiResponse({ status: 'started', runId }, 202);
 }

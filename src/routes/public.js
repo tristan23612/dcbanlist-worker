@@ -1,4 +1,4 @@
-import { SEC, SNAPSHOT_KEY } from '../constants.js';
+import { SEC, SNAPSHOT_CACHE_TAG, SNAPSHOT_KEY } from '../constants.js';
 import { HTML } from '../web/page.js';
 import { markStaleRunInterrupted } from '../storage/refreshStatusStore.js';
 
@@ -47,7 +47,9 @@ function renderRefreshDetails(status){
   const db=status.database;
   const snapshot=status.snapshot;
   const dbText=db?.status==='updated'?((db.inserted??0)+'건 추가'):db?.status==='skipped'?'추가할 기록 없음':db?.status==='running'?'저장 중':db?.status==='failed'?'실패':'미실행';
-  const snapshotText=snapshot?.status==='updated'?((snapshot.rows??0)+'건'):snapshot?.status==='running'?'갱신 중':snapshot?.status==='failed'?'실패':'미실행';
+  const snapshotText=snapshot?.status==='updated'
+    ?(snapshot.rows??0)+'건'+(snapshot.cachePurged===true?' · 캐시 반영':snapshot.cachePurged===false?' · 캐시 비우기 실패':'')
+    :snapshot?.status==='running'?'갱신 중':snapshot?.status==='failed'?'실패':'미실행';
   const rows=[
     ['상태',status.state||'기록 없음'],
     ['실행 방식',trigger],
@@ -175,7 +177,12 @@ export async function handlePublicGet(request, env) {
     const snapshot = await env.KV.get(SNAPSHOT_KEY);
     if (!snapshot) return new Response('{"error":"no snapshot yet"}', { status: 404, headers: SEC });
     return new Response(snapshot, {
-      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...SEC },
+      headers: {
+        ...SEC,
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cloudflare-CDN-Cache-Control': 'public, max-age=86400',
+        'Cache-Tag': SNAPSHOT_CACHE_TAG,
+      },
     });
   }
   return null;

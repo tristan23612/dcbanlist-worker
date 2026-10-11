@@ -1,4 +1,4 @@
-import { COLS, SNAPSHOT_KEY } from '../constants.js';
+import { COLS, SNAPSHOT_CACHE_TAG, SNAPSHOT_KEY } from '../constants.js';
 
 const INSERT_SQL =
   'INSERT INTO ban_logs(gallery_id,nickname,identifier,content,reason,duration,date_time,manager) ' +
@@ -17,11 +17,11 @@ export async function getLatestData(galleryId, env) {
   } : null;
 }
 
-export async function ingestRecords(galleryId, records, env, refreshSnapshot = false) {
-  return ingestGalleryRecords([{ galleryId, records }], env, refreshSnapshot);
+export async function ingestRecords(galleryId, records, env, refreshSnapshot = false, ctx) {
+  return ingestGalleryRecords([{ galleryId, records }], env, refreshSnapshot, ctx);
 }
 
-export async function ingestGalleryRecords(galleries, env, refreshSnapshot = false) {
+export async function ingestGalleryRecords(galleries, env, refreshSnapshot = false, ctx) {
   const statements = [];
   for (const { galleryId, records } of galleries) {
     const items = records.map(record => [
@@ -46,10 +46,14 @@ export async function ingestGalleryRecords(galleries, env, refreshSnapshot = fal
   };
   if (refreshSnapshot) {
     try {
-      const rows = await rebuildSnapshot(env);
-      response.snapshot = { status: 'updated', rows };
+      const rows = await rebuildSnapshotAndPurgeCache(env, ctx);
+      response.snapshot = { status: 'updated', rows, cachePurged: true };
     } catch (error) {
-      response.snapshot = { status: 'failed', message: error.message };
+      response.snapshot = {
+        status: error.snapshotUpdated ? 'updated' : 'failed',
+        ...(error.snapshotUpdated ? { rows: error.snapshotRows, cachePurged: false } : {}),
+        message: error.message,
+      };
     }
   }
   return response;
@@ -73,4 +77,18 @@ export async function rebuildSnapshot(env) {
     updatedAt: new Date().toISOString(), columns: COLS, rows, ids,
   }));
   return rows.length;
+}
+
+export async function rebuildSnapshotAndPurgeCache(env, ctx) {
+  const rows = await rebuildSnapshot(env);
+  try {
+    await ctx.cache.purge({ tags: [SNAPSHOT_CACHE_TAG] });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const cacheError = new Error(`KV 스냅샷은 갱신됐지만 캐시 비우기에 실패했습니다: ${message}`);
+    cacheError.snapshotUpdated = true;
+    cacheError.snapshotRows = rows;
+    throw cacheError;
+  }
+  return rows;
 }

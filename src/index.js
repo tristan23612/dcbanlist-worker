@@ -18,18 +18,18 @@ export default {
 
     if (request.method === 'POST') {
       if (path === '/admin/verify' || path === '/admin/delete') {
-        const response = await handleAdmin(request, env, path);
+        const response = await handleAdmin(request, env, path, ctx);
         if (response) return response;
       }
       if (path === '/refresh') return handleRefresh(request, env, ctx);
       if (path === '/admin/manual-refresh') return handleManualRefresh(request, env, ctx);
-      if (path === '/') return handleAppApi(request, env);
+      if (path === '/') return handleAppApi(request, env, ctx);
     }
 
     return new Response('not found', { status: 404, headers: SEC });
   },
 
   async scheduled(_event, env, ctx) {
-    ctx.waitUntil(runDailyRefresh(env, { trigger: 'cron' }));
+    ctx.waitUntil(runDailyRefresh(env, { trigger: 'cron', ctx }));
   },
 };
