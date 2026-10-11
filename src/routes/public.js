@@ -3,9 +3,33 @@ import { HTML } from '../web/page.js';
 import { markStaleRunInterrupted } from '../storage/refreshStatusStore.js';
 
 function pageWithStatus() {
-  const statusMarkup = '<section class="refresh-summary" id="crawl-status" style="display:none"><div id="crawl-message"></div><details><summary>세부 정보</summary><dl id="crawl-details"></dl></details></section>';
+  const statusMarkup = '<section class="refresh-summary" id="crawl-status" style="display:none"><div id="crawl-message"></div><details><summary>세부 정보</summary><div class="crawl-details-panel"><dl id="crawl-details"></dl></div></details></section>';
   const script = `
 let crawlDetailsSignature='';
+const crawlDetailsDisclosure=$('crawl-status').querySelector('details');
+const crawlDetailsPanel=crawlDetailsDisclosure.querySelector('.crawl-details-panel');
+let crawlDetailsCloseTimer;
+crawlDetailsDisclosure.querySelector('summary').addEventListener('click',event=>{
+  event.preventDefault();
+  clearTimeout(crawlDetailsCloseTimer);
+  if(crawlDetailsDisclosure.open){
+    crawlDetailsPanel.classList.add('is-closing');
+    crawlDetailsCloseTimer=setTimeout(()=>{
+      crawlDetailsDisclosure.open=false;
+      crawlDetailsPanel.classList.remove('is-closing');
+    },250);
+  }else{
+    crawlDetailsDisclosure.open=true;
+    crawlDetailsPanel.classList.remove('is-closing');
+  }
+});
+ crawlDetailsPanel.addEventListener('transitionend',event=>{
+  if(event.target===crawlDetailsPanel&&event.propertyName==='grid-template-rows'&&crawlDetailsPanel.classList.contains('is-closing')){
+    clearTimeout(crawlDetailsCloseTimer);
+    crawlDetailsDisclosure.open=false;
+    crawlDetailsPanel.classList.remove('is-closing');
+  }
+});
 function formatRefreshTime(value){
   const date=new Date(value);
   return Number.isNaN(date.getTime())?'미기록':date.toLocaleString('ko-KR');

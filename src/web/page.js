@@ -74,14 +74,16 @@ tbody tr:hover{background:var(--button-hover)}
 .refresh-summary[data-state="failed"],.refresh-summary[data-state="interrupted"]{border-left-color:var(--danger-text)}
 .refresh-summary details{margin-top:4px}
 .refresh-summary summary{width:max-content;cursor:pointer;user-select:none}
-#crawl-details{display:grid;grid-template-columns:max-content 1fr;gap:3px 14px;margin-top:8px}
+.crawl-details-panel{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .24s ease,opacity .18s ease}
+.refresh-summary details[open] .crawl-details-panel:not(.is-closing){grid-template-rows:1fr;opacity:1}
+.crawl-details-panel #crawl-details{min-height:0;overflow:hidden;display:grid;grid-template-columns:max-content 1fr;gap:3px 14px;margin-top:8px}
 #crawl-details dt{font-weight:600;color:var(--text)}
 #crawl-details dd{min-width:0;overflow-wrap:anywhere}
 tbody tr{border-bottom:1px solid var(--border);transition:background-color .3s ease,border-color .3s ease}
 tbody tr.row-enter{animation:row-enter .16s ease-out both}
 @keyframes row-enter{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 @keyframes delete-mark{from{opacity:1}to{opacity:.6}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;transition-duration:.3s!important}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}body,.c{transition-duration:.3s!important}.scope-menu,.scope-caret{transition-duration:.16s!important}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;transition-duration:.3s!important}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}body,.c{transition-duration:.3s!important}.scope-menu,.scope-caret{transition-duration:.16s!important}.crawl-details-panel{transition-duration:.01ms!important}}
 @media(max-width:600px){body{padding:8px}.c,.c.admin-wide{width:100%;max-width:none;padding:10px}.top{align-items:flex-start;flex-direction:column}.admin-actions{width:100%;flex-wrap:wrap}.admin-actions button{flex:1}.search{flex-wrap:wrap}.scope-picker{max-width:150px;flex:0 0 150px}.w{width:100%;margin:0}input{order:2;flex-basis:100%}}
 </style></head><body><div class="c">
 <div class="top"><h2>차단 기록 아카이브</h2><div class="admin-actions"><button id="theme" type="button">다크 모드</button><button id="manualRefresh" class="admin-control is-hidden" aria-hidden="true" tabindex="-1">수동 갱신</button><button id="apply" class="apply admin-control is-hidden" aria-hidden="true" tabindex="-1" disabled>삭제 반영</button><button id="a">관리자 인증</button></div></div><div class="s" id="u"></div>
