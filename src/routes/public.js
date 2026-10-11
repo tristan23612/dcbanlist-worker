@@ -3,7 +3,7 @@ import { HTML } from '../web/page.js';
 import { markStaleRunInterrupted } from '../storage/refreshStatusStore.js';
 
 function pageWithStatus() {
-  const statusMarkup = '<section class="refresh-summary" id="crawl-status" style="display:none"><div id="crawl-message"></div><div class="crawl-disclosure"><button type="button" class="crawl-details-toggle" aria-expanded="false" aria-controls="crawl-details-panel">세부 정보</button><div class="crawl-details-panel" id="crawl-details-panel" aria-hidden="true" inert><dl id="crawl-details"></dl></div></div></section>';
+  const statusMarkup = '<section class="refresh-summary" id="crawl-status"><div id="crawl-message">갱신 상태 확인 중...</div><div class="crawl-disclosure"><button type="button" class="crawl-details-toggle" aria-expanded="false" aria-controls="crawl-details-panel">세부 정보</button><div class="crawl-details-panel" id="crawl-details-panel" aria-hidden="true" inert><dl id="crawl-details"></dl></div></div></section>';
   const script = `
 let crawlDetailsSignature='';
 const crawlDetailsDisclosure=$('crawl-status');
@@ -49,6 +49,7 @@ function renderRefreshDetails(status){
   const dbText=db?.status==='updated'?((db.inserted??0)+'건 추가'):db?.status==='skipped'?'추가할 기록 없음':db?.status==='running'?'저장 중':db?.status==='failed'?'실패':'미실행';
   const snapshotText=snapshot?.status==='updated'?((snapshot.rows??0)+'건'):snapshot?.status==='running'?'갱신 중':snapshot?.status==='failed'?'실패':'미실행';
   const rows=[
+    ['상태',status.state||'기록 없음'],
     ['실행 방식',trigger],
     ['시작',formatRefreshTime(status.startedAt)],
     ['완료',status.finishedAt?formatRefreshTime(status.finishedAt):'진행 중'],
@@ -79,14 +80,15 @@ function renderRefreshDetails(status){
 async function showCrawlStatus(){
   try{
     const response=await fetch('/refresh-status.json?token='+encodeURIComponent(viewToken));
-    if(!response.ok)return null;
+    if(!response.ok){
+      $('crawl-message').textContent='갱신 상태를 불러오지 못했습니다.';
+      return null;
+    }
     const status=await response.json();
     const el=$('crawl-status');
     el.dataset.state=status?.state||'';
     const refreshLabel=status?.trigger==='manual'?'수동 갱신':'자동 갱신';
     const failed=['failed','interrupted'].includes(status?.state);
-    const showStatus=['queued','running','success','failed','interrupted'].includes(status?.state);
-    el.style.display=showStatus?'block':'none';
     $('crawl-message').style.color=failed?'var(--danger-text)':'var(--muted)';
     if(status?.state==='queued')$('crawl-message').textContent=refreshLabel+' 대기 중';
     else if(status?.state==='running'){
@@ -102,10 +104,15 @@ async function showCrawlStatus(){
     }else if(failed){
       const outcome=status.state==='interrupted'?'중단':'실패';
       $('crawl-message').textContent=refreshLabel+' '+outcome+' · '+(status.message||'원인을 확인할 수 없습니다.');
+    }else{
+      $('crawl-message').textContent='갱신 상태 기록이 없습니다.';
     }
-    if(showStatus)renderRefreshDetails(status);
+    renderRefreshDetails(status||{});
     return status;
-  }catch(e){return null}
+  }catch(e){
+    $('crawl-message').textContent='갱신 상태를 불러오지 못했습니다.';
+    return null;
+  }
 }
 let crawlStatusTimer;
 async function pollCrawlStatus(keepPolling=false,idleDelay=60000){
