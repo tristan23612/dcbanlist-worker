@@ -71,12 +71,20 @@ tbody tr:hover{background:var(--button-hover)}
 .pending-delete:hover{background:var(--danger-bg)}
 .s{font-size:12px;color:var(--muted);margin-top:8px;transition:color .3s ease}
 #timeContext{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;padding:10px 12px;border:1px solid var(--border);border-left:3px solid var(--focus);border-radius:6px;background:var(--header);transition:background-color .3s ease,border-color .3s ease,color .3s ease}
+.view-switch{max-height:180px;opacity:1;transform:translateY(0);transition:max-height .28s ease,opacity .2s ease,transform .28s ease,margin .28s ease,border-width .28s ease}
+.search.view-switch{overflow:visible}
+.gallery-tabs.view-switch{max-height:80px;overflow-x:auto;overflow-y:hidden}
+.context-mode .view-switch{max-height:0;margin-top:0;margin-bottom:0;border-width:0;opacity:0;transform:translateY(-6px);overflow:hidden;pointer-events:none}
+#timeContext{max-height:0;margin:0;padding:0 12px;border-top:0 solid var(--border);border-right:0 solid var(--border);border-bottom:0 solid var(--border);opacity:0;overflow:hidden;transform:translateY(-6px);visibility:hidden;transition:max-height .28s ease,opacity .2s ease,transform .28s ease,margin .28s ease,padding .28s ease,border-width .28s ease,border-color .3s ease,color .3s ease,visibility 0s linear .28s}
+.context-mode #timeContext{max-height:180px;margin:0 0 12px;padding:10px 12px;border-width:1px;border-left-width:3px;opacity:1;transform:translateY(0);visibility:visible;transition:max-height .28s ease,opacity .2s ease,transform .28s ease,margin .28s ease,padding .28s ease,border-width .28s ease,border-color .3s ease,color .3s ease,visibility 0s}
 .time-context-info{min-width:0;color:var(--text);font-size:13px;line-height:1.5}
 .time-context-info strong{display:block;overflow-wrap:anywhere}
 .time-context-info span{color:var(--muted)}
 .time-context-actions{display:flex;align-items:center;gap:6px}
 .time-context-actions button{padding:6px 9px;font-size:12px}
-.context-mode .search,.context-mode .gallery-tabs{display:none}
+.context-page{display:none;justify-content:center;margin:0 0 8px}
+.context-page button{min-width:160px}
+.context-mode .context-page{display:flex}
 [hidden]{display:none!important}
 #u{min-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .refresh-summary{margin:4px 0 8px;padding:8px 10px;border:1px solid var(--border);border-left:3px solid var(--border);border-radius:6px;background:var(--header);font-size:12px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere;transition:background-color .3s ease,border-color .3s ease,color .3s ease}
@@ -96,14 +104,16 @@ tbody tr{border-bottom:1px solid var(--border);transition:background-color .3s e
 tbody tr.row-enter{animation:row-enter .16s ease-out both}
 @keyframes row-enter{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 @keyframes delete-mark{from{opacity:1}to{opacity:.6}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;transition-duration:.3s!important}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}body,.c{transition-duration:.3s!important}.scope-menu,.scope-caret{transition-duration:.16s!important}.crawl-details-panel,.crawl-details-toggle::before{transition-duration:.01ms!important}}
-@media(max-width:600px){body{padding:8px}.c,.c.admin-wide{width:100%;max-width:none;padding:10px}.top{align-items:flex-start;flex-direction:column}.admin-actions{width:100%;flex-wrap:wrap}.admin-actions button{flex:1}.search{flex-wrap:wrap}.scope-picker{max-width:150px;flex:0 0 150px}.w{width:100%;margin:0}input{order:2;flex-basis:100%}#timeContext{align-items:stretch;flex-direction:column}.time-context-actions{display:flex;flex-wrap:wrap}.time-context-actions button{flex:1}.time-context-actions #contextBack{flex:1 0 100%;order:3}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;transition-duration:.3s!important}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}body,.c{transition-duration:.3s!important}.scope-menu,.scope-caret{transition-duration:.16s!important}.crawl-details-panel,.crawl-details-toggle::before,.view-switch,#timeContext{transition-duration:.01ms!important}}
+@media(max-width:600px){body{padding:8px}.c,.c.admin-wide{width:100%;max-width:none;padding:10px}.top{align-items:flex-start;flex-direction:column}.admin-actions{width:100%;flex-wrap:wrap}.admin-actions button{flex:1}.search{flex-wrap:wrap}.scope-picker{max-width:150px;flex:0 0 150px}.w{width:100%;margin:0}input{order:2;flex-basis:100%}#timeContext{align-items:stretch;flex-direction:column;max-height:240px}.context-mode #timeContext{max-height:240px}.time-context-actions{display:flex;flex-wrap:wrap}.time-context-actions button{flex:1}.time-context-actions #contextBack{flex:1 0 100%;order:3}.context-page button{width:100%}}
 </style></head><body><div class="c">
 <div class="top"><h2>차단 기록 아카이브</h2><div class="admin-actions"><button id="theme" type="button">다크 모드</button><button id="manualRefresh" class="admin-control is-hidden" aria-hidden="true" tabindex="-1">수동 갱신</button><button id="apply" class="apply admin-control is-hidden" aria-hidden="true" tabindex="-1" disabled>삭제 반영</button><button id="a">관리자 인증</button></div></div><div class="s" id="u">마지막 데이터 갱신: 불러오는 중...</div>
-<div class="search"><div class="scope-picker" id="scopePicker"><button type="button" id="scopeToggle" class="scope-toggle" aria-label="검색 범위" aria-haspopup="listbox" aria-expanded="false" aria-controls="scopeMenu"><span id="scopeLabel">전체</span><span class="scope-caret" aria-hidden="true"></span></button><div class="scope-menu" id="scopeMenu" role="listbox" aria-label="검색 범위"></div></div><select id="scope" aria-label="검색 범위" style="display:none"><option value="all">전체</option></select><input id="q" placeholder="검색..."><button id="copy">전체 복사</button><button id="contextOpen" type="button" hidden>이 시점 보기</button></div>
-<div class="gallery-tabs" id="galleryTabs" role="tablist" aria-label="갤러리"></div>
-<section id="timeContext" hidden aria-label="기록 시점 보기"><div class="time-context-info"><strong id="timeContextTitle"></strong><span id="timeContextMeta"></span></div><div class="time-context-actions"><button id="contextNewer" type="button">더 최신 기록</button><button id="contextBack" type="button">검색 결과로 돌아가기</button><button id="contextOlder" type="button">더 오래된 기록</button></div></section>
+<div class="view-header" id="viewHeader"><div class="search view-switch"><div class="scope-picker" id="scopePicker"><button type="button" id="scopeToggle" class="scope-toggle" aria-label="검색 범위" aria-haspopup="listbox" aria-expanded="false" aria-controls="scopeMenu"><span id="scopeLabel">전체</span><span class="scope-caret" aria-hidden="true"></span></button><div class="scope-menu" id="scopeMenu" role="listbox" aria-label="검색 범위"></div></div><select id="scope" aria-label="검색 범위" style="display:none"><option value="all">전체</option></select><input id="q" placeholder="검색..."><button class="copy-button" data-copy>전체 복사</button><button id="contextOpen" type="button" hidden>이 시점 보기</button></div>
+<div class="gallery-tabs view-switch" id="galleryTabs" role="tablist" aria-label="갤러리"></div>
+<section id="timeContext" aria-label="기록 시점 보기" inert><div class="time-context-info"><strong id="timeContextTitle"></strong><span id="timeContextMeta"></span></div><div class="time-context-actions"><button class="copy-button" data-copy>전체 복사</button><button id="contextBack" type="button">검색 결과로 돌아가기</button></div></section></div>
+<div class="context-page"><button id="contextNewer" type="button">더 최신 기록</button></div>
 <div class="w"><table id="t"><colgroup id="cols"></colgroup><thead><tr id="h"></tr></thead><tbody id="b"></tbody></table></div>
+<div class="context-page"><button id="contextOlder" type="button">더 오래된 기록</button></div>
 <div class="s" id="s">불러오는 중...</div>
 <button id="m" style="display:none">더 보기</button>
 </div><script>
@@ -136,7 +146,11 @@ function updateAdminUi(){
   updateApplyButton();
 }
 function updateCopyButton(){
-  $('copy').textContent=selectedRowIndex!==null&&view.includes(selectedRowIndex)?'선택 복사':'전체 복사';
+  const contextIndices=contextView?contextView.galleryIndices.slice(contextView.startPosition,contextView.endPosition):view;
+  const hasSelectedRow=selectedRowIndex!==null&&contextIndices.includes(selectedRowIndex);
+  document.querySelectorAll('[data-copy]').forEach(button=>button.textContent=hasSelectedRow?'선택 복사':'전체 복사');
+  document.querySelectorAll('.view-switch').forEach(element=>element.inert=Boolean(contextView));
+  $('timeContext').inert=!contextView;
   $('contextOpen').hidden=Boolean(contextView)||selectedRowIndex===null||!view.includes(selectedRowIndex);
 }
 function updateScopeSelection(value){
@@ -314,11 +328,12 @@ let t;
 $('q').oninput=()=>{clearTimeout(t);t=setTimeout(filterRows,150)};
 $('scope').onchange=filterRows;
 $('m').onclick=()=>render(true);
-$('copy').onclick=async()=>{
+document.querySelectorAll('[data-copy]').forEach(button=>button.onclick=async()=>{
   const query=$('q').value.trim();
   const scope=$('scope').value;
   const visibleColumns=columns.slice(1);
-  const selected=selectedRowIndex!==null&&view.includes(selectedRowIndex);
+  const copyScope=contextView?contextView.galleryIndices.slice(contextView.startPosition,contextView.endPosition):view;
+  const selected=selectedRowIndex!==null&&copyScope.includes(selectedRowIndex);
   const copiedRowIndex=selected?selectedRowIndex:null;
   const copiedRows=selected?[copiedRowIndex]:view;
   const searchCondition=query?'검색: '+(scope==='all'?'전체':visibleColumns[Number(scope)])+' = '+query:'';
@@ -336,7 +351,7 @@ $('copy').onclick=async()=>{
     $('s').textContent=copiedRows.length+'건을 복사했습니다.'
   }
   catch(e){$('s').textContent='복사하지 못했습니다. 브라우저 클립보드 권한을 확인해주세요.'}
-};
+});
 $('contextOpen').onclick=()=>{
   if(selectedRowIndex===null||!view.includes(selectedRowIndex))return;
   const targetIndex=selectedRowIndex;
@@ -357,7 +372,7 @@ $('contextOpen').onclick=()=>{
     returnState:{query:$('q').value,scope:$('scope').value,gallery:selectedGallery,shown,selectedId:rowIds[selectedRowIndex]},
   };
   document.querySelector('.c').classList.add('context-mode');
-  $('timeContext').hidden=false;
+  updateCopyButton();
   render(false);
   requestAnimationFrame(()=>document.querySelector('tr.time-anchor')?.scrollIntoView({behavior:'smooth',block:'center'}));
 };
@@ -379,7 +394,6 @@ function leaveTimeContext(restore=true){
   const returnState=contextView.returnState;
   contextView=null;
   document.querySelector('.c').classList.remove('context-mode');
-  $('timeContext').hidden=true;
   if(restore&&returnState){
     $('q').value=returnState.query;
     $('scope').value=returnState.scope;
