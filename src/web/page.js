@@ -75,7 +75,7 @@ tbody tr:hover{background:var(--button-hover)}
 .search.view-switch{position:relative;z-index:2;overflow:visible}
 .gallery-tabs.view-switch{max-height:80px;overflow-x:auto;overflow-y:hidden}
 .context-mode .view-switch{max-height:0;margin-top:0;margin-bottom:0;border-width:0;opacity:0;transform:translateY(-6px);overflow:hidden;pointer-events:none}
-#timeContext{max-height:0;margin:0;padding:0 12px;border-top:0 solid var(--border);border-right:0 solid var(--border);border-bottom:0 solid var(--border);opacity:0;overflow:hidden;transform:translateY(-6px);visibility:hidden;transition:max-height .28s ease,opacity .2s ease,transform .28s ease,margin .28s ease,padding .28s ease,border-width .28s ease,border-color .3s ease,color .3s ease,visibility 0s linear .28s}
+#timeContext{min-height:0;max-height:0;margin:0;padding:0 12px;border-top:0 solid var(--border);border-right:0 solid var(--border);border-bottom:0 solid var(--border);opacity:0;overflow:hidden;transform:translateY(-6px);visibility:hidden;transition:max-height .28s ease,opacity .2s ease,transform .28s ease,margin .28s ease,padding .28s ease,border-width .28s ease,border-color .3s ease,color .3s ease,visibility 0s linear .28s}
 .context-mode #timeContext{max-height:180px;margin:0 0 12px;padding:10px 12px;border-width:1px;border-left-width:3px;opacity:1;transform:translateY(0);visibility:visible;transition:max-height .28s ease,opacity .2s ease,transform .28s ease,margin .28s ease,padding .28s ease,border-width .28s ease,border-color .3s ease,color .3s ease,visibility 0s}
 .time-context-info{min-width:0;color:var(--text);font-size:13px;line-height:1.5}
 .time-context-info strong{display:block;overflow-wrap:anywhere}
