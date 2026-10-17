@@ -381,13 +381,11 @@ $('contextNewer').onclick=()=>{
   if(!contextView)return;
   contextView.startPosition=Math.max(0,contextView.startPosition-50);
   render(false);
-  requestAnimationFrame(()=>document.querySelector('tr.time-anchor')?.scrollIntoView({behavior:'smooth',block:'center'}));
 };
 $('contextOlder').onclick=()=>{
   if(!contextView)return;
   contextView.endPosition=Math.min(contextView.galleryIndices.length,contextView.endPosition+50);
   render(false);
-  requestAnimationFrame(()=>document.querySelector('tr.time-anchor')?.scrollIntoView({behavior:'smooth',block:'center'}));
 };
 function leaveTimeContext(restore=true){
   if(!contextView)return;
