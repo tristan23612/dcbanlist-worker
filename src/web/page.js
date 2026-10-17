@@ -47,6 +47,7 @@ button:disabled{cursor:not-allowed;opacity:.55}
 .pending-delete td:not(:last-child){opacity:.6;animation:delete-mark .3s ease-out both}
 tbody tr[data-row-index]{cursor:pointer}
 tbody tr.row-selected td:first-child{box-shadow:inset 3px 0 var(--focus)}
+tbody tr.time-anchor{outline:2px solid var(--focus);outline-offset:-2px;background:var(--button-hover)}
 .apply{color:#fff;background:var(--apply-bg);border-color:var(--apply-bg)}
 .apply:hover{filter:brightness(1.08);background:var(--apply-bg)}
 .admin-on{color:var(--admin-text);border-color:var(--admin-border)}
@@ -69,6 +70,14 @@ td{height:38px;vertical-align:middle}
 tbody tr:hover{background:var(--button-hover)}
 .pending-delete:hover{background:var(--danger-bg)}
 .s{font-size:12px;color:var(--muted);margin-top:8px;transition:color .3s ease}
+#timeContext{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;padding:10px 12px;border:1px solid var(--border);border-left:3px solid var(--focus);border-radius:6px;background:var(--header);transition:background-color .3s ease,border-color .3s ease,color .3s ease}
+.time-context-info{min-width:0;color:var(--text);font-size:13px;line-height:1.5}
+.time-context-info strong{display:block;overflow-wrap:anywhere}
+.time-context-info span{color:var(--muted)}
+.time-context-actions{display:flex;align-items:center;gap:6px}
+.time-context-actions button{padding:6px 9px;font-size:12px}
+.context-mode .search,.context-mode .gallery-tabs{display:none}
+[hidden]{display:none!important}
 #u{min-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .refresh-summary{margin:4px 0 8px;padding:8px 10px;border:1px solid var(--border);border-left:3px solid var(--border);border-radius:6px;background:var(--header);font-size:12px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere;transition:background-color .3s ease,border-color .3s ease,color .3s ease}
 .refresh-summary[data-state="running"],.refresh-summary[data-state="queued"]{border-left-color:var(--focus)}
@@ -88,16 +97,17 @@ tbody tr.row-enter{animation:row-enter .16s ease-out both}
 @keyframes row-enter{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 @keyframes delete-mark{from{opacity:1}to{opacity:.6}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;transition-duration:.3s!important}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}body,.c{transition-duration:.3s!important}.scope-menu,.scope-caret{transition-duration:.16s!important}.crawl-details-panel,.crawl-details-toggle::before{transition-duration:.01ms!important}}
-@media(max-width:600px){body{padding:8px}.c,.c.admin-wide{width:100%;max-width:none;padding:10px}.top{align-items:flex-start;flex-direction:column}.admin-actions{width:100%;flex-wrap:wrap}.admin-actions button{flex:1}.search{flex-wrap:wrap}.scope-picker{max-width:150px;flex:0 0 150px}.w{width:100%;margin:0}input{order:2;flex-basis:100%}}
+@media(max-width:600px){body{padding:8px}.c,.c.admin-wide{width:100%;max-width:none;padding:10px}.top{align-items:flex-start;flex-direction:column}.admin-actions{width:100%;flex-wrap:wrap}.admin-actions button{flex:1}.search{flex-wrap:wrap}.scope-picker{max-width:150px;flex:0 0 150px}.w{width:100%;margin:0}input{order:2;flex-basis:100%}#timeContext{align-items:stretch;flex-direction:column}.time-context-actions{display:flex;flex-wrap:wrap}.time-context-actions button{flex:1}.time-context-actions #contextBack{flex:1 0 100%;order:3}}
 </style></head><body><div class="c">
 <div class="top"><h2>차단 기록 아카이브</h2><div class="admin-actions"><button id="theme" type="button">다크 모드</button><button id="manualRefresh" class="admin-control is-hidden" aria-hidden="true" tabindex="-1">수동 갱신</button><button id="apply" class="apply admin-control is-hidden" aria-hidden="true" tabindex="-1" disabled>삭제 반영</button><button id="a">관리자 인증</button></div></div><div class="s" id="u">마지막 데이터 갱신: 불러오는 중...</div>
-<div class="search"><div class="scope-picker" id="scopePicker"><button type="button" id="scopeToggle" class="scope-toggle" aria-label="검색 범위" aria-haspopup="listbox" aria-expanded="false" aria-controls="scopeMenu"><span id="scopeLabel">전체</span><span class="scope-caret" aria-hidden="true"></span></button><div class="scope-menu" id="scopeMenu" role="listbox" aria-label="검색 범위"></div></div><select id="scope" aria-label="검색 범위" style="display:none"><option value="all">전체</option></select><input id="q" placeholder="검색..."><button id="copy">전체 복사</button></div>
+<div class="search"><div class="scope-picker" id="scopePicker"><button type="button" id="scopeToggle" class="scope-toggle" aria-label="검색 범위" aria-haspopup="listbox" aria-expanded="false" aria-controls="scopeMenu"><span id="scopeLabel">전체</span><span class="scope-caret" aria-hidden="true"></span></button><div class="scope-menu" id="scopeMenu" role="listbox" aria-label="검색 범위"></div></div><select id="scope" aria-label="검색 범위" style="display:none"><option value="all">전체</option></select><input id="q" placeholder="검색..."><button id="copy">전체 복사</button><button id="contextOpen" type="button" hidden>이 시점 보기</button></div>
 <div class="gallery-tabs" id="galleryTabs" role="tablist" aria-label="갤러리"></div>
+<section id="timeContext" hidden aria-label="기록 시점 보기"><div class="time-context-info"><strong id="timeContextTitle"></strong><span id="timeContextMeta"></span></div><div class="time-context-actions"><button id="contextNewer" type="button">더 최신 기록</button><button id="contextBack" type="button">검색 결과로 돌아가기</button><button id="contextOlder" type="button">더 오래된 기록</button></div></section>
 <div class="w"><table id="t"><colgroup id="cols"></colgroup><thead><tr id="h"></tr></thead><tbody id="b"></tbody></table></div>
 <div class="s" id="s">불러오는 중...</div>
 <button id="m" style="display:none">더 보기</button>
 </div><script>
-let rows=[],rowIds=[],columns=[],galleries=[],selectedGallery='',view=[],shown=0,lastRenderedIndices=[],lastRenderedIds=[],selectedRowIndex=null,adminToken='',pendingDelete=new Set(),applyingDeletes=false;
+let rows=[],rowIds=[],columns=[],galleries=[],selectedGallery='',view=[],shown=0,lastRenderedIndices=[],lastRenderedIds=[],selectedRowIndex=null,adminToken='',pendingDelete=new Set(),applyingDeletes=false,contextView=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let savedTheme=null;
@@ -127,6 +137,7 @@ function updateAdminUi(){
 }
 function updateCopyButton(){
   $('copy').textContent=selectedRowIndex!==null&&view.includes(selectedRowIndex)?'선택 복사':'전체 복사';
+  $('contextOpen').hidden=Boolean(contextView)||selectedRowIndex===null||!view.includes(selectedRowIndex);
 }
 function updateScopeSelection(value){
   $('scopeLabel').textContent=value==='all'?'전체':(columns[Number(value)+1]||'전체');
@@ -202,7 +213,7 @@ document.addEventListener('click',e=>{
 $('scopePicker').addEventListener('focusout',()=>setTimeout(()=>{
   if(!$('scopePicker').contains(document.activeElement))closeScopeMenu(false);
 },0));
-function filterRows(forceRender=false){
+function filterRows(forceRender=false,visibleLimit=100){
   const q=$('q').value.trim().toLowerCase(),scope=$('scope').value;
   const nextView=[];
   for(let i=0;i<rows.length;i++){
@@ -215,32 +226,52 @@ function filterRows(forceRender=false){
   const indicesChanged=nextView.length!==lastRenderedIndices.length||nextView.some((index,i)=>index!==lastRenderedIndices[i]);
   view=nextView;
   if(selectedRowIndex!==null&&!view.includes(selectedRowIndex))selectedRowIndex=null;
-  if(forceRender||resultsChanged||indicesChanged)render(false,resultsChanged);
+  if(forceRender||resultsChanged||indicesChanged)render(false,resultsChanged,visibleLimit);
 }
-function render(more,animateRows=false){
-  if(!more)shown=0;
+function render(more,animateRows=false,visibleLimit=100){
+  if(!more&&!contextView)shown=0;
   const widths=[150,150,250,200,50,150,150];
   const hasAdminColumn=adminToken&&rowIds.length===rows.length;
   document.querySelector('.c').classList.toggle('admin-wide',Boolean(hasAdminColumn));
   $('cols').innerHTML=columns.slice(1).map((_,i)=>'<col style="width:'+(widths[i]||140)+'px">').join('')+(hasAdminColumn?'<col style="width:100px">':'');
   $('t').style.width=(widths.slice(0,columns.length-1).reduce((sum,width)=>sum+width,0)+(hasAdminColumn?100:0))+'px';
   $('h').innerHTML=columns.slice(1).map(k=>'<th title="'+esc(k)+'">'+esc(k)+'</th>').join('')+(hasAdminColumn?'<th>관리</th>':'');
-  const end=Math.min(shown+100,view.length),out=[];
-  for(let i=shown;i<end;i++){
-    const rowIndex=view[i];
+  let rowsToRender=[],listStart=0;
+  if(contextView){
+    rowsToRender=contextView.galleryIndices.slice(contextView.startPosition,contextView.endPosition);
+    $('m').style.display='none';
+  }else{
+    listStart=more?shown:0;
+    const end=Math.min(listStart+(more?100:Math.max(100,visibleLimit)),view.length);
+    rowsToRender=view.slice(listStart,end);
+  }
+  const out=[];
+  for(const rowIndex of rowsToRender){
     const cells=rows[rowIndex].slice(1).map(v=>'<td title="'+esc(v)+'"><div class="cell-text"><span class="cell-value">'+esc(v)+'</span></div></td>').join('');
     const pending=adminToken&&pendingDelete.has(rowIds[rowIndex]);
     const selected=rowIndex===selectedRowIndex;
     const deleteCell=adminToken&&rowIds[rowIndex]!=null?'<td class="admin-cell"><button class="del" data-index="'+rowIndex+'"'+(applyingDeletes?' disabled':'')+'>'+(pending?'삭제 취소':'삭제 표시')+'</button></td>':'';
-    const rowClasses=[more||animateRows?'row-enter':'',pending?'pending-delete':'',selected?'row-selected':''].filter(Boolean).join(' ');
+    const isAnchor=contextView&&rowIds[rowIndex]===contextView.targetId;
+    const rowClasses=[more||animateRows?'row-enter':'',pending?'pending-delete':'',selected?'row-selected':'',isAnchor?'time-anchor':''].filter(Boolean).join(' ');
     out.push('<tr data-row-index="'+rowIndex+'" aria-selected="'+String(selected)+'"'+(rowClasses?' class="'+rowClasses+'"':'')+'>'+cells+deleteCell+'</tr>');
   }
   if(more)$('b').insertAdjacentHTML('beforeend',out.join(''));else $('b').innerHTML=out.join('');
-  shown=end;
-  lastRenderedIndices=[...view];
-  lastRenderedIds=view.map(i=>rowIds[i]);
-  $('s').textContent=view.length+'건 중 '+shown+'건 표시';
-  $('m').style.display=shown<view.length?'':'none';
+  if(contextView){
+    const targetPosition=contextView.targetPosition;
+    const dateIndex=Math.max(0,columns.indexOf('처리날짜'));
+    const dateTime=rows[contextView.targetIndex]?.[dateIndex]||'날짜 미상';
+    $('timeContextTitle').textContent=selectedGallery+' · '+dateTime;
+    $('timeContextMeta').textContent='갤러리 기록 '+(targetPosition+1).toLocaleString('ko-KR')+'번째 · 주변 '+rowsToRender.length+'건 표시';
+    $('contextNewer').disabled=contextView.startPosition===0;
+    $('contextOlder').disabled=contextView.endPosition>=contextView.galleryIndices.length;
+    $('s').textContent=rowsToRender.length+'건의 주변 기록 표시';
+  }else{
+    shown=listStart+rowsToRender.length;
+    lastRenderedIndices=[...view];
+    lastRenderedIds=view.map(i=>rowIds[i]);
+    $('s').textContent=view.length+'건 중 '+shown+'건 표시';
+    $('m').style.display=shown<view.length?'':'none';
+  }
   updateApplyButton();
   updateCopyButton();
 }
@@ -253,6 +284,7 @@ async function loadSnapshot(){
   rows=j.rows||[];
   rowIds=j.ids||[];
   columns=j.columns||[];
+  if(contextView&&!rebaseContextView())leaveTimeContext(true);
   renderGalleryTabs();
   $('scope').innerHTML='<option value="all">전체</option>'+columns.slice(1).map((k,i)=>'<option value="'+i+'">'+esc(k)+'</option>').join('');
   $('scopeMenu').innerHTML='<button type="button" class="scope-option" role="option" aria-selected="false" data-value="all">전체</button>'+columns.slice(1).map((k,i)=>'<button type="button" class="scope-option" role="option" aria-selected="false" data-value="'+i+'">'+esc(k)+'</button>').join('');
@@ -305,6 +337,83 @@ $('copy').onclick=async()=>{
   }
   catch(e){$('s').textContent='복사하지 못했습니다. 브라우저 클립보드 권한을 확인해주세요.'}
 };
+$('contextOpen').onclick=()=>{
+  if(selectedRowIndex===null||!view.includes(selectedRowIndex))return;
+  const targetIndex=selectedRowIndex;
+  const targetId=rowIds[targetIndex];
+  if(targetId==null)return;
+  const gallery=String(rows[targetIndex]?.[0]??'').trim();
+  const galleryIndices=[];
+  for(let i=0;i<rows.length;i++)if(String(rows[i]?.[0]??'').trim()===gallery)galleryIndices.push(i);
+  const targetPosition=galleryIndices.findIndex(index=>rowIds[index]===targetId);
+  if(targetPosition<0)return;
+  contextView={
+    targetId,
+    targetIndex,
+    targetPosition,
+    galleryIndices,
+    startPosition:Math.max(0,targetPosition-50),
+    endPosition:Math.min(galleryIndices.length,targetPosition+51),
+    returnState:{query:$('q').value,scope:$('scope').value,gallery:selectedGallery,shown,selectedId:rowIds[selectedRowIndex]},
+  };
+  document.querySelector('.c').classList.add('context-mode');
+  $('timeContext').hidden=false;
+  render(false);
+  requestAnimationFrame(()=>document.querySelector('tr.time-anchor')?.scrollIntoView({behavior:'smooth',block:'center'}));
+};
+$('contextBack').onclick=()=>leaveTimeContext(true);
+$('contextNewer').onclick=()=>{
+  if(!contextView)return;
+  contextView.startPosition=Math.max(0,contextView.startPosition-50);
+  render(false);
+  requestAnimationFrame(()=>document.querySelector('tr.time-anchor')?.scrollIntoView({behavior:'smooth',block:'center'}));
+};
+$('contextOlder').onclick=()=>{
+  if(!contextView)return;
+  contextView.endPosition=Math.min(contextView.galleryIndices.length,contextView.endPosition+50);
+  render(false);
+  requestAnimationFrame(()=>document.querySelector('tr.time-anchor')?.scrollIntoView({behavior:'smooth',block:'center'}));
+};
+function leaveTimeContext(restore=true){
+  if(!contextView)return;
+  const returnState=contextView.returnState;
+  contextView=null;
+  document.querySelector('.c').classList.remove('context-mode');
+  $('timeContext').hidden=true;
+  if(restore&&returnState){
+    $('q').value=returnState.query;
+    $('scope').value=returnState.scope;
+    updateScopeSelection(returnState.scope);
+    selectedGallery=returnState.gallery;
+    $('galleryTabs').querySelectorAll('.gallery-tab').forEach(tab=>tab.setAttribute('aria-selected',String(tab.dataset.gallery===selectedGallery)));
+    selectedRowIndex=rowIds.findIndex(id=>id===returnState.selectedId);
+    if(selectedRowIndex<0)selectedRowIndex=null;
+    filterRows(true,returnState.shown);
+    const selectedPosition=selectedRowIndex===null?-1:view.indexOf(selectedRowIndex);
+    if(selectedPosition>=shown)render(false,false,selectedPosition+1);
+    if(selectedRowIndex!==null)requestAnimationFrame(()=>document.querySelector('tr.row-selected')?.scrollIntoView({behavior:'smooth',block:'center'}));
+  }else{
+    updateCopyButton();
+  }
+}
+function rebaseContextView(){
+  if(!contextView)return true;
+  const targetIndex=rowIds.findIndex(id=>id===contextView.targetId);
+  if(targetIndex<0)return false;
+  const gallery=String(rows[targetIndex]?.[0]??'').trim();
+  const galleryIndices=[];
+  for(let i=0;i<rows.length;i++)if(String(rows[i]?.[0]??'').trim()===gallery)galleryIndices.push(i);
+  const targetPosition=galleryIndices.indexOf(targetIndex);
+  if(targetPosition<0)return false;
+  const newerCount=contextView.targetPosition-contextView.startPosition;
+  const olderCount=contextView.endPosition-contextView.targetPosition-1;
+  contextView.targetIndex=targetIndex;
+  contextView.targetPosition=targetPosition;
+  contextView.galleryIndices=galleryIndices;
+  contextView.startPosition=Math.max(0,targetPosition-newerCount);
+  contextView.endPosition=Math.min(galleryIndices.length,targetPosition+1+olderCount);
+  return true;
+}
 $('a').onclick=async()=>{
   if(adminToken){adminToken='';pendingDelete.clear();try{sessionStorage.removeItem('dc-banlist-admin-token')}catch(e){}updateAdminUi();render(false);return}
   const token=prompt('관리자 토큰을 입력하세요.');
@@ -363,6 +472,7 @@ $('apply').onclick=async()=>{
     const r=await fetch('/admin/delete',{method:'POST',headers:{Authorization:'Bearer '+adminToken,'Content-Type':'application/json'},body:JSON.stringify({ids})});
     const j=await r.json();
     if(!r.ok||j.status!=='success')throw new Error(j.message||'삭제에 실패했습니다.');
+    if(contextView)leaveTimeContext(true);
     const deletedIds=new Set(ids);
     for(let i=rowIds.length-1;i>=0;i--)if(deletedIds.has(rowIds[i])){rowIds.splice(i,1);rows.splice(i,1)}
     pendingDelete.clear();selectedRowIndex=null;renderGalleryTabs();filterRows();$('s').textContent=(j.deleted||0)+'건을 삭제하고 KV 스냅샷을 갱신했습니다.';
