@@ -147,7 +147,7 @@ async function pollCrawlStatus(keepPolling=false,idleDelay=60000){
 pollCrawlStatus(true,60000);
 `;
   return HTML
-    .replace('<div class="search">', statusMarkup + '<div class="search">')
+    .replace('<div class="view-header" id="viewHeader">', statusMarkup + '<div class="view-header" id="viewHeader">')
     .replace('</script></body></html>', script + '</script></body></html>');
 }
 
