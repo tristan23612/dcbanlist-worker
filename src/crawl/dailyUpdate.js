@@ -2,6 +2,7 @@ import { createBlockListClient } from '../dcinside/blockListClient.js';
 import { parseBlockListPage, isSameEntry } from '../dcinside/blockListParser.js';
 import { getLatestData, ingestGalleryRecords, rebuildSnapshotAndPurgeCache } from '../storage/banLogsRepository.js';
 import { logRefreshEvent, markStaleRunInterrupted, writeRefreshStatus } from '../storage/refreshStatusStore.js';
+import { acquireOperationLock, operationLabel, releaseOperationLock } from '../storage/operationLock.js';
 import { safeError } from '../utils.js';
 
 function configuredGalleries(env) {
@@ -26,16 +27,16 @@ function maxPages(env) {
   return Math.max(1, Math.min(100, Math.floor(value)));
 }
 
-export async function runDailyRefresh(env, { trigger = 'cron', runId = null, ctx } = {}) {
+export async function runDailyRefresh(env, { trigger = 'cron', runId = null, ctx, lock = null } = {}) {
   const refreshLabel = trigger === 'manual' ? '수동 갱신' : '자동 갱신';
-  const previous = await markStaleRunInterrupted(env);
-  if (previous && ['queued', 'running'].includes(previous.state) && previous.runId !== runId) {
-    logRefreshEvent({ runId, trigger }, 'warn', 'run_skipped', `이미 다른 갱신 작업이 진행 중이어서 ${refreshLabel} 요청을 건너뜁니다.`, {
-      activeRunId: previous.runId || null,
-    });
-    return previous;
+  runId ||= crypto.randomUUID();
+  lock ||= await acquireOperationLock(env, trigger, runId);
+  if (!lock.acquired) {
+    const activeTrigger = operationLabel(lock.active?.trigger);
+    const message = `${activeTrigger}이 진행 중이어서 ${refreshLabel}을 시작하지 않았습니다.`;
+    logRefreshEvent({ runId, trigger }, 'warn', 'run_skipped', message, { activeRunId: lock.active?.runId || null });
+    return { state: 'skipped', trigger, runId, message };
   }
-
   const startedMs = Date.now();
   const base = {
     state: 'running', trigger, runId,
@@ -46,6 +47,7 @@ export async function runDailyRefresh(env, { trigger = 'cron', runId = null, ctx
   logRefreshEvent(base, 'info', 'run_started', base.message);
 
   try {
+    await markStaleRunInterrupted(env);
     await writeRefreshStatus(env, base);
     const galleries = configuredGalleries(env);
     const pageLimit = maxPages(env);
@@ -187,5 +189,7 @@ export async function runDailyRefresh(env, { trigger = 'cron', runId = null, ctx
     logRefreshEvent(failed, 'error', 'run_failed', message, { durationMs: failed.durationMs, stage: base.stage });
     await writeRefreshStatus(env, failed);
     return failed;
+  } finally {
+    await releaseOperationLock(env, runId);
   }
 }

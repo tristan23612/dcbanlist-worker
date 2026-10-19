@@ -9,3 +9,10 @@ CREATE TABLE IF NOT EXISTS ban_logs (
   date_time TEXT NOT NULL DEFAULT '',
   manager TEXT NOT NULL DEFAULT ''
 );
+
+CREATE TABLE IF NOT EXISTS worker_operation_lock (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  run_id TEXT NOT NULL,
+  trigger TEXT NOT NULL,
+  expires_at INTEGER NOT NULL
+);

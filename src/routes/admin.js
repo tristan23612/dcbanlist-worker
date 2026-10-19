@@ -1,5 +1,6 @@
 import { apiResponse, hasBearerToken, readJson } from '../utils.js';
 import { purgeSnapshotCache, rebuildSnapshotAndPurgeCache } from '../storage/banLogsRepository.js';
+import { acquireOperationLock, releaseOperationLock } from '../storage/operationLock.js';
 
 export async function handleAdmin(request, env, path, ctx) {
   if (path === '/admin/purge-cache') {
@@ -20,7 +21,13 @@ export async function handleAdmin(request, env, path, ctx) {
       let needsRebuild = false;
       try { needsRebuild = !Array.isArray(JSON.parse(snapshot).ids); }
       catch { needsRebuild = true; }
-      if (needsRebuild) await rebuildSnapshotAndPurgeCache(env, ctx);
+      if (needsRebuild) {
+        const runId = crypto.randomUUID();
+        const lock = await acquireOperationLock(env, 'admin-verify', runId);
+        if (!lock.acquired) return apiResponse({ status: 'error', message: '다른 갱신 작업이 진행 중입니다.' }, 409);
+        try { await rebuildSnapshotAndPurgeCache(env, ctx); }
+        finally { await releaseOperationLock(env, runId); }
+      }
     }
     return apiResponse({ status: 'success' });
   }
@@ -35,6 +42,9 @@ export async function handleAdmin(request, env, path, ctx) {
     if (!ids.length || ids.some(id => !Number.isSafeInteger(id) || id <= 0)) {
       return apiResponse({ status: 'error', message: 'Invalid record ids' });
     }
+    const runId = crypto.randomUUID();
+    const lock = await acquireOperationLock(env, 'delete', runId);
+    if (!lock.acquired) return apiResponse({ status: 'error', message: '다른 갱신 작업이 진행 중이어서 삭제를 시작하지 않았습니다.' }, 409);
     try {
       const result = await env.DB.prepare(
         'DELETE FROM ban_logs WHERE id IN (SELECT CAST(value AS INTEGER) FROM json_each(?1))',
@@ -52,6 +62,8 @@ export async function handleAdmin(request, env, path, ctx) {
       return apiResponse({ status: 'success', deleted, requested: ids.length });
     } catch (error) {
       return apiResponse({ status: 'error', message: error.message });
+    } finally {
+      await releaseOperationLock(env, runId);
     }
   }
   return null;

@@ -43,7 +43,7 @@ function formatDuration(value){
   return Math.floor(seconds/60)+'분 '+(seconds%60)+'초';
 }
 function renderRefreshDetails(status){
-  const trigger=status.trigger==='cron'?'Cron 자동 실행':status.trigger==='manual'?'관리자 수동 실행':(status.trigger||'미상');
+  const trigger=status.trigger==='cron'?'Cron 자동 실행':status.trigger==='manual'?'관리자 수동 실행':status.trigger==='local'?'앱 로컬 ingest':(status.trigger||'미상');
   const db=status.database;
   const snapshot=status.snapshot;
   const dbText=db?.status==='updated'?((db.inserted??0)+'건 추가'):db?.status==='skipped'?'추가할 기록 없음':db?.status==='running'?'저장 중':db?.status==='failed'?'실패':'미실행';
@@ -62,7 +62,7 @@ function renderRefreshDetails(status){
   if(Number.isFinite(Number(status.collected)))rows.push(['수집 건수',Number(status.collected)+'건']);
   if(status.maxPages)rows.push(['페이지 상한',status.maxPages+'페이지']);
   for(const gallery of status.galleries||[]){
-    rows.push([gallery.galleryId,(gallery.collected||0)+'건 수집 · '+(gallery.pagesRead||0)+'페이지 확인']);
+    rows.push([gallery.galleryId,(gallery.collected||0)+'건 수집'+(gallery.pagesRead?' · '+gallery.pagesRead+'페이지 확인':'')]);
   }
   for(const log of status.logs||[]){
     const stage=({initializing:'준비',crawl:'수집',database:'DB 저장',snapshot:'KV 스냅샷'})[log.stage]||log.stage||'갱신';
@@ -89,7 +89,7 @@ async function showCrawlStatus(){
     const status=await response.json();
     const el=$('crawl-status');
     el.dataset.state=status?.state||'';
-    const refreshLabel=status?.trigger==='manual'?'수동 갱신':'자동 갱신';
+    const refreshLabel=status?.trigger==='manual'?'수동 갱신':status?.trigger==='local'?'앱 로컬 갱신':'자동 갱신';
     const failed=['failed','interrupted'].includes(status?.state);
     $('crawl-message').style.color=failed?'var(--danger-text)':'var(--muted)';
     if(status?.state==='queued')$('crawl-message').textContent=refreshLabel+' 대기 중';
@@ -125,7 +125,7 @@ async function pollCrawlStatus(keepPolling=false,idleDelay=60000){
   if(active){
     button.dataset.refreshing='true';
     button.disabled=true;
-    const refreshLabel=status.trigger==='manual'?'수동 갱신':'자동 갱신';
+    const refreshLabel=status.trigger==='manual'?'수동 갱신':status.trigger==='local'?'앱 로컬 갱신':'자동 갱신';
     button.textContent=refreshLabel+(status.state==='queued'?' 대기 중...':' 진행 중...');
     crawlStatusTimer=setTimeout(()=>pollCrawlStatus(true,idleDelay),status.state==='queued'?2500:8000);
   }else{
