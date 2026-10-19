@@ -82,7 +82,7 @@ export async function rebuildSnapshot(env) {
 export async function rebuildSnapshotAndPurgeCache(env, ctx) {
   const rows = await rebuildSnapshot(env);
   try {
-    await ctx.cache.purge({ tags: [SNAPSHOT_CACHE_TAG] });
+    await purgeSnapshotCache(ctx);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const cacheError = new Error(`KV 스냅샷은 갱신됐지만 캐시 비우기에 실패했습니다: ${message}`);
@@ -91,4 +91,15 @@ export async function rebuildSnapshotAndPurgeCache(env, ctx) {
     throw cacheError;
   }
   return rows;
+}
+
+export async function purgeSnapshotCache(ctx) {
+  const result = await ctx.cache.purge({ tags: [SNAPSHOT_CACHE_TAG] });
+  if (!result?.success) {
+    const details = Array.isArray(result?.errors)
+      ? result.errors.map(error => error.message || `code ${error.code}`).join('; ')
+      : '';
+    throw new Error(details || 'Cloudflare가 캐시 purge 요청을 승인하지 않았습니다.');
+  }
+  return result;
 }

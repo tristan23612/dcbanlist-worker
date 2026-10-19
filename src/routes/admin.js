@@ -1,7 +1,18 @@
 import { apiResponse, hasBearerToken, readJson } from '../utils.js';
-import { rebuildSnapshotAndPurgeCache } from '../storage/banLogsRepository.js';
+import { purgeSnapshotCache, rebuildSnapshotAndPurgeCache } from '../storage/banLogsRepository.js';
 
 export async function handleAdmin(request, env, path, ctx) {
+  if (path === '/admin/purge-cache') {
+    if (!hasBearerToken(request, env.ADMIN_TOKEN)) return apiResponse({ status: 'error', message: 'unauthorized' });
+    try {
+      await purgeSnapshotCache(ctx);
+      return apiResponse({ status: 'success', cachePurged: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return apiResponse({ status: 'error', cachePurged: false, message }, 502);
+    }
+  }
+
   if (path === '/admin/verify') {
     if (!hasBearerToken(request, env.ADMIN_TOKEN)) return apiResponse({ status: 'error', message: 'unauthorized' });
     const snapshot = await env.KV.get('snapshot');

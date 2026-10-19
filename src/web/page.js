@@ -15,7 +15,10 @@ body{font-family:"Pretendard GOV",-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
 .c{width:1134px;max-width:calc(100vw - 32px);margin:0 auto;background:var(--surface);color:var(--text);padding:16px;border:1px solid var(--border);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);transition:width .3s ease,background-color .3s ease,border-color .3s ease,color .3s ease,box-shadow .3s ease}
 .c.admin-wide{width:1234px}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.admin-actions{display:flex;align-items:center;gap:8px}
+.admin-actions{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.admin-primary,.admin-secondary{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.admin-secondary{max-height:0;overflow:hidden;opacity:0;transform:translateY(-4px);transition:max-height .28s ease,opacity .2s ease,transform .28s ease}
+.admin-actions.admin-authorized .admin-secondary{max-height:100px;opacity:1;transform:translateY(0)}
 .admin-control{flex:0 1 auto;max-width:180px;margin-left:0;margin-right:0;opacity:1;transform:translateY(0);transition:max-width .3s ease,margin .3s ease,opacity .3s ease,transform .3s ease,padding .3s ease,border-width .3s ease}
 .admin-control.is-hidden{visibility:hidden;flex:0 0 0;max-width:0;margin-left:-4px;margin-right:-4px;padding-left:0;padding-right:0;border-width:0;opacity:0;transform:translateY(-4px);pointer-events:none;transition:max-width .3s ease,margin .3s ease,opacity .3s ease,transform .3s ease,padding .3s ease,border-width .3s ease,visibility 0s linear .3s}
 .search{display:flex;align-items:center;gap:8px;margin:12px 0}
@@ -105,9 +108,9 @@ tbody tr.row-enter{animation:row-enter .16s ease-out both}
 @keyframes row-enter{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 @keyframes delete-mark{from{opacity:1}to{opacity:.6}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;transition-duration:.3s!important}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}body,.c{transition-duration:.3s!important}.scope-menu,.scope-caret{transition-duration:.16s!important}.crawl-details-panel,.crawl-details-toggle::before,.view-switch,#timeContext{transition-duration:.01ms!important}}
-@media(max-width:600px){body{padding:8px}.c,.c.admin-wide{width:100%;max-width:none;padding:10px}.top{align-items:flex-start;flex-direction:column}.admin-actions{width:100%;flex-wrap:wrap}.admin-actions button{flex:1}.search{flex-wrap:wrap}.scope-picker{max-width:150px;flex:0 0 150px}.gallery-tabs{margin-bottom:4px}.w{width:100%;margin:0}input{order:2;flex-basis:100%}#timeContext{align-items:stretch;flex-direction:column}.context-mode #timeContext{max-height:240px}.time-context-actions{display:flex;flex-wrap:wrap}.time-context-actions button{flex:1}.time-context-actions #contextBack{flex:1 0 100%;order:3}.context-page button{width:100%}}
+@media(max-width:600px){body{padding:8px}.c,.c.admin-wide{width:100%;max-width:none;padding:10px}.top{align-items:flex-start;flex-direction:column}.admin-actions,.admin-primary,.admin-secondary{width:100%}.admin-actions{align-items:stretch}.admin-primary,.admin-secondary{justify-content:flex-end;flex-wrap:wrap}.admin-actions button{flex:1}.search{flex-wrap:wrap}.scope-picker{max-width:150px;flex:0 0 150px}.gallery-tabs{margin-bottom:4px}.w{width:100%;margin:0}input{order:2;flex-basis:100%}#timeContext{align-items:stretch;flex-direction:column}.context-mode #timeContext{max-height:240px}.time-context-actions{display:flex;flex-wrap:wrap}.time-context-actions button{flex:1}.time-context-actions #contextBack{flex:1 0 100%;order:3}.context-page button{width:100%}}
 </style></head><body><div class="c">
-<div class="top"><h2>차단 기록 아카이브</h2><div class="admin-actions"><button id="theme" type="button">다크 모드</button><button id="manualRefresh" class="admin-control is-hidden" aria-hidden="true" tabindex="-1">수동 갱신</button><button id="apply" class="apply admin-control is-hidden" aria-hidden="true" tabindex="-1" disabled>삭제 반영</button><button id="a">관리자 인증</button></div></div><div class="s" id="u">마지막 데이터 갱신: 불러오는 중...</div>
+<div class="top"><h2>차단 기록 아카이브</h2><div class="admin-actions" id="adminActions"><div class="admin-primary"><button id="theme" type="button">다크 모드</button><button id="a">관리자 인증</button></div><div class="admin-secondary"><button id="manualRefresh" class="admin-control is-hidden" aria-hidden="true" tabindex="-1">수동 갱신</button><button id="apply" class="apply admin-control is-hidden" aria-hidden="true" tabindex="-1" disabled>삭제 반영</button><button id="purgeCache" class="admin-control is-hidden" aria-hidden="true" tabindex="-1">캐시 초기화</button></div></div></div><div class="s" id="u">마지막 데이터 갱신: 불러오는 중...</div>
 <div class="view-header" id="viewHeader"><div class="search view-switch"><div class="scope-picker" id="scopePicker"><button type="button" id="scopeToggle" class="scope-toggle" aria-label="검색 범위" aria-haspopup="listbox" aria-expanded="false" aria-controls="scopeMenu"><span id="scopeLabel">전체</span><span class="scope-caret" aria-hidden="true"></span></button><div class="scope-menu" id="scopeMenu" role="listbox" aria-label="검색 범위"></div></div><select id="scope" aria-label="검색 범위" style="display:none"><option value="all">전체</option></select><input id="q" placeholder="검색..."><button class="copy-button" data-copy>전체 복사</button><button id="contextOpen" type="button" hidden>이 시점 보기</button></div>
 <div class="gallery-tabs view-switch" id="galleryTabs" role="tablist" aria-label="갤러리"></div>
 <section id="timeContext" aria-label="기록 시점 보기" inert><div class="time-context-info"><strong id="timeContextTitle"></strong><span id="timeContextMeta"></span></div><div class="time-context-actions"><button class="copy-button" data-copy>전체 복사</button><button id="contextBack" type="button">검색 결과로 돌아가기</button></div></section></div>
@@ -117,7 +120,7 @@ tbody tr.row-enter{animation:row-enter .16s ease-out both}
 <div class="s" id="s">불러오는 중...</div>
 <button id="m" style="display:none">더 보기</button>
 </div><script>
-let rows=[],rowIds=[],columns=[],galleries=[],selectedGallery='',view=[],shown=0,lastRenderedIndices=[],lastRenderedIds=[],selectedRowIndex=null,adminToken='',pendingDelete=new Set(),applyingDeletes=false,contextView=null;
+let rows=[],rowIds=[],columns=[],galleries=[],selectedGallery='',view=[],shown=0,lastRenderedIndices=[],lastRenderedIds=[],selectedRowIndex=null,adminToken='',pendingDelete=new Set(),applyingDeletes=false,cachePurging=false,contextView=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let savedTheme=null;
@@ -140,9 +143,13 @@ function updateApplyButton(){
 function updateAdminUi(){
   $('a').textContent=adminToken?'관리자 인증됨':'관리자 인증';
   $('a').classList.toggle('admin-on',Boolean(adminToken));
+  $('adminActions').classList.toggle('admin-authorized',Boolean(adminToken));
   $('manualRefresh').classList.toggle('is-hidden',!adminToken);
   $('manualRefresh').setAttribute('aria-hidden',String(!adminToken));
   $('manualRefresh').tabIndex=adminToken?0:-1;
+  $('purgeCache').classList.toggle('is-hidden',!adminToken);
+  $('purgeCache').setAttribute('aria-hidden',String(!adminToken));
+  $('purgeCache').tabIndex=adminToken?0:-1;
   updateApplyButton();
 }
 function updateCopyButton(){
@@ -447,6 +454,27 @@ $('manualRefresh').onclick=async()=>{
     $('s').textContent=result.status==='running'?result.message:'수동 갱신을 시작했습니다. 진행 상태를 확인하고 있습니다...';
     if(typeof pollCrawlStatus==='function')pollCrawlStatus(true,3000);
   }catch(e){delete button.dataset.refreshing;button.disabled=false;button.textContent='수동 갱신';$('s').textContent=e.message}
+};
+$('purgeCache').onclick=async()=>{
+  if(!adminToken||cachePurging)return;
+  const button=$('purgeCache');
+  cachePurging=true;button.disabled=true;button.textContent='캐시 초기화 중...';
+  $('s').textContent='Cloudflare 캐시를 초기화하고 있습니다...';
+  try{
+    const response=await fetch('/admin/purge-cache',{method:'POST',headers:{Authorization:'Bearer '+adminToken}});
+    const result=await response.json();
+    if(!response.ok||result.status!=='success'||result.cachePurged!==true)throw new Error(result.message||'캐시 초기화에 실패했습니다.');
+    try{
+      await loadSnapshot();
+      $('s').textContent='Cloudflare 캐시를 초기화하고 최신 KV 스냅샷을 불러왔습니다.';
+    }catch(error){
+      $('s').textContent='캐시는 초기화했지만 최신 스냅샷을 불러오지 못했습니다: '+error.message;
+    }
+  }catch(error){
+    $('s').textContent='캐시 초기화 실패: '+error.message;
+  }finally{
+    cachePurging=false;button.disabled=false;button.textContent='캐시 초기화';
+  }
 };
 $('b').onclick=async e=>{
   const button=e.target.closest('.del');

@@ -17,7 +17,7 @@ export default {
     }
 
     if (request.method === 'POST') {
-      if (path === '/admin/verify' || path === '/admin/delete') {
+      if (path === '/admin/verify' || path === '/admin/delete' || path === '/admin/purge-cache') {
         const response = await handleAdmin(request, env, path, ctx);
         if (response) return response;
       }
