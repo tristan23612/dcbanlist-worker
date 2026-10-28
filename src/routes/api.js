@@ -61,7 +61,7 @@ async function searchIdentifier(body, env) {
   };
 }
 
-export async function handleAppApi(request, env, ctx) {
+export async function handleAppApi(request, env) {
   let body;
   try { body = await readJson(request); }
   catch (error) { return apiResponse({ status: 'error', message: error.message }); }
@@ -69,7 +69,7 @@ export async function handleAppApi(request, env, ctx) {
   const expectedToken = action === 'ingest' ? env.INGEST_TOKEN : env.VIEW_TOKEN;
   if (!hasBearerToken(request, expectedToken)) return apiResponse({ status: 'error', message: 'unauthorized' });
 
-  if (action === 'ingest') return handleIngest(body, request, env, ctx);
+  if (action === 'ingest') return handleIngest(body, request, env);
   try {
     if (action === 'getLatestData') {
       const gid = String(body.galleryId || '').trim();
@@ -83,7 +83,7 @@ export async function handleAppApi(request, env, ctx) {
   }
 }
 
-async function handleIngest(body, request, env, ctx) {
+async function handleIngest(body, request, env) {
   const galleryId = String(body.galleryId || '').trim();
   if (!galleryId || !Array.isArray(body.banList)) return apiResponse({ status: 'error', message: 'There is an empty data' });
 
@@ -111,7 +111,7 @@ async function handleIngest(body, request, env, ctx) {
     }
 
     const refresh = (request.headers.get('X-Refresh-Snapshot') || '').trim().toLowerCase() === 'true';
-    const result = await ingestRecords(galleryId, body.banList, env, refresh, ctx);
+    const result = await ingestRecords(galleryId, body.banList, env, refresh, 'local-ingest');
     if (body.updateRefreshStatus === true) {
       result.refreshStatus = await updateLocalIngestStatus(env, result, {
         startedAt, startedMs, galleryId, collected: body.banList.length, runId,
@@ -138,7 +138,7 @@ export async function handleRefresh(request, env, ctx) {
   const lock = await acquireOperationLock(env, 'snapshot', runId);
   if (!lock.acquired) return apiResponse({ status: 'error', message: '다른 갱신 작업이 진행 중입니다.' }, 409);
   ctx.waitUntil((async () => {
-    try { await rebuildSnapshotAndPurgeCache(env, ctx); }
+    try { await rebuildSnapshotAndPurgeCache(env, { source: 'snapshot-refresh' }); }
     finally { await releaseOperationLock(env, runId); }
   })());
   return apiResponse({ status: 'started' });
@@ -161,6 +161,6 @@ export async function handleManualRefresh(request, env, ctx) {
     await releaseOperationLock(env, runId);
     return apiResponse({ status: 'error', message: error.message }, 500);
   }
-  ctx.waitUntil(runDailyRefresh(env, { trigger: 'manual', runId, ctx, lock }));
+  ctx.waitUntil(runDailyRefresh(env, { trigger: 'manual', runId, lock }));
   return apiResponse({ status: 'started', runId }, 202);
 }

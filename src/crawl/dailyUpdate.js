@@ -27,7 +27,7 @@ function maxPages(env) {
   return Math.max(1, Math.min(100, Math.floor(value)));
 }
 
-export async function runDailyRefresh(env, { trigger = 'cron', runId = null, ctx, lock = null } = {}) {
+export async function runDailyRefresh(env, { trigger = 'cron', runId = null, lock = null } = {}) {
   const refreshLabel = trigger === 'manual' ? '수동 갱신' : '자동 갱신';
   runId ||= crypto.randomUUID();
   lock ||= await acquireOperationLock(env, trigger, runId);
@@ -150,7 +150,7 @@ export async function runDailyRefresh(env, { trigger = 'cron', runId = null, ctx
     base.message = 'KV 스냅샷을 갱신하고 있습니다.';
     logRefreshEvent(base, 'info', 'snapshot_rebuild_started', base.message);
     await writeRefreshStatus(env, base);
-    const snapshotRows = await rebuildSnapshotAndPurgeCache(env, ctx);
+    const snapshotRows = await rebuildSnapshotAndPurgeCache(env, { source: trigger });
     base.snapshot = { status: 'updated', rows: snapshotRows, cachePurged: true };
     logRefreshEvent(base, 'info', 'snapshot_rebuild_completed', `KV 스냅샷 갱신을 완료했습니다. ${snapshotRows}건입니다.`, {
       rows: snapshotRows,
@@ -167,7 +167,7 @@ export async function runDailyRefresh(env, { trigger = 'cron', runId = null, ctx
   } catch (error) {
     const message = base.stage === 'snapshot'
       ? error.snapshotUpdated
-        ? `KV 스냅샷은 갱신됐지만 캐시 비우기에 실패했습니다: ${safeError(error)}`
+        ? `KV 스냅샷은 갱신됐지만 캐시 purge/반영 확인에 실패했습니다: ${safeError(error)}`
         : `DB 저장은 완료했지만 KV 스냅샷 갱신에 실패했습니다: ${safeError(error)}`
       : base.stage === 'database'
         ? `DB 저장에 실패했습니다: ${safeError(error)}`

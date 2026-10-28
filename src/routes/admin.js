@@ -2,11 +2,11 @@ import { apiResponse, hasBearerToken, readJson } from '../utils.js';
 import { purgeSnapshotCache, rebuildSnapshotAndPurgeCache } from '../storage/banLogsRepository.js';
 import { acquireOperationLock, releaseOperationLock } from '../storage/operationLock.js';
 
-export async function handleAdmin(request, env, path, ctx) {
+export async function handleAdmin(request, env, path) {
   if (path === '/admin/purge-cache') {
     if (!hasBearerToken(request, env.ADMIN_TOKEN)) return apiResponse({ status: 'error', message: 'unauthorized' });
     try {
-      await purgeSnapshotCache(ctx);
+      await purgeSnapshotCache('admin-purge-button');
       return apiResponse({ status: 'success', cachePurged: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -25,7 +25,7 @@ export async function handleAdmin(request, env, path, ctx) {
         const runId = crypto.randomUUID();
         const lock = await acquireOperationLock(env, 'admin-verify', runId);
         if (!lock.acquired) return apiResponse({ status: 'error', message: '다른 갱신 작업이 진행 중입니다.' }, 409);
-        try { await rebuildSnapshotAndPurgeCache(env, ctx); }
+        try { await rebuildSnapshotAndPurgeCache(env, { source: 'admin-verify' }); }
         finally { await releaseOperationLock(env, runId); }
       }
     }
@@ -50,7 +50,7 @@ export async function handleAdmin(request, env, path, ctx) {
         'DELETE FROM ban_logs WHERE id IN (SELECT CAST(value AS INTEGER) FROM json_each(?1))',
       ).bind(JSON.stringify(ids)).run();
       const deleted = result.meta?.changes || 0;
-      try { await rebuildSnapshotAndPurgeCache(env, ctx); }
+      try { await rebuildSnapshotAndPurgeCache(env, { source: 'admin-delete' }); }
       catch (error) {
         return apiResponse({
           status: 'error', deleted,

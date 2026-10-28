@@ -1,3 +1,4 @@
+import { cache } from 'cloudflare:workers';
 import { COLS, SNAPSHOT_CACHE_TAG, SNAPSHOT_KEY } from '../constants.js';
 
 const INSERT_SQL =
@@ -17,11 +18,11 @@ export async function getLatestData(galleryId, env) {
   } : null;
 }
 
-export async function ingestRecords(galleryId, records, env, refreshSnapshot = false, ctx) {
-  return ingestGalleryRecords([{ galleryId, records }], env, refreshSnapshot, ctx);
+export async function ingestRecords(galleryId, records, env, refreshSnapshot = false, source = 'local-ingest') {
+  return ingestGalleryRecords([{ galleryId, records }], env, refreshSnapshot, source);
 }
 
-export async function ingestGalleryRecords(galleries, env, refreshSnapshot = false, ctx) {
+export async function ingestGalleryRecords(galleries, env, refreshSnapshot = false, source = 'local-ingest') {
   const statements = [];
   for (const { galleryId, records } of galleries) {
     const items = records.map(record => [
@@ -46,7 +47,7 @@ export async function ingestGalleryRecords(galleries, env, refreshSnapshot = fal
   };
   if (refreshSnapshot) {
     try {
-      const rows = await rebuildSnapshotAndPurgeCache(env, ctx);
+      const rows = await rebuildSnapshotAndPurgeCache(env, { source });
       response.snapshot = { status: 'updated', rows, cachePurged: true };
     } catch (error) {
       response.snapshot = {
@@ -66,40 +67,56 @@ export async function rebuildSnapshot(env) {
   ).all();
   if (!results.length) {
     await env.KV.delete(SNAPSHOT_KEY);
-    return 0;
+    return { rows: 0, updatedAt: null };
   }
   const rows = results.map(row => [
     row.gallery_id, row.nickname, row.identifier, row.content,
     row.reason, row.duration, row.date_time, row.manager,
   ]);
   const ids = results.map(row => row.id);
-  await env.KV.put(SNAPSHOT_KEY, JSON.stringify({
-    updatedAt: new Date().toISOString(), columns: COLS, rows, ids,
-  }));
-  return rows.length;
+  const updatedAt = new Date().toISOString();
+  await env.KV.put(SNAPSHOT_KEY, JSON.stringify({ updatedAt, columns: COLS, rows, ids }));
+  return { rows: rows.length, updatedAt };
 }
 
-export async function rebuildSnapshotAndPurgeCache(env, ctx) {
-  const rows = await rebuildSnapshot(env);
+export async function rebuildSnapshotAndPurgeCache(env, { source = 'unknown' } = {}) {
+  const snapshot = await rebuildSnapshot(env);
   try {
-    await purgeSnapshotCache(ctx);
+    await purgeSnapshotCache(source);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const cacheError = new Error(`KV 스냅샷은 갱신됐지만 캐시 비우기에 실패했습니다: ${message}`);
+    const cacheError = new Error(`KV 스냅샷은 갱신됐지만 캐시 purge/반영 확인에 실패했습니다: ${message}`);
     cacheError.snapshotUpdated = true;
-    cacheError.snapshotRows = rows;
+    cacheError.snapshotRows = snapshot.rows;
     throw cacheError;
   }
-  return rows;
+  return snapshot.rows;
 }
 
-export async function purgeSnapshotCache(ctx) {
-  const result = await ctx.cache.purge({ tags: [SNAPSHOT_CACHE_TAG] });
-  if (!result?.success) {
-    const details = Array.isArray(result?.errors)
-      ? result.errors.map(error => error.message || `code ${error.code}`).join('; ')
-      : '';
-    throw new Error(details || 'Cloudflare가 캐시 purge 요청을 승인하지 않았습니다.');
+function logCacheEvent(level, event, details = {}) {
+  const entry = {
+    service: 'dcbanlist', component: 'snapshot-cache', at: new Date().toISOString(),
+    level, event, ...details,
+  };
+  if (level === 'error') console.error(JSON.stringify(entry));
+  else console.log(JSON.stringify(entry));
+}
+
+export async function purgeSnapshotCache(source = 'unknown') {
+  logCacheEvent('info', 'purge_started', { source, tags: [SNAPSHOT_CACHE_TAG], api: 'cloudflare:workers.cache' });
+  try {
+    const result = await cache.purge({ tags: [SNAPSHOT_CACHE_TAG] });
+    if (!result?.success) {
+      const details = Array.isArray(result?.errors)
+        ? result.errors.map(error => error.message || `code ${error.code}`).join('; ')
+        : '';
+      throw new Error(details || 'Cloudflare가 캐시 purge 요청을 승인하지 않았습니다.');
+    }
+    logCacheEvent('info', 'purge_accepted', { source, tags: [SNAPSHOT_CACHE_TAG], success: true });
+    return result;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logCacheEvent('error', 'purge_failed', { source, tags: [SNAPSHOT_CACHE_TAG], message });
+    throw error;
   }
-  return result;
 }
