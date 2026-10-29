@@ -103,20 +103,30 @@ function logCacheEvent(level, event, details = {}) {
 }
 
 export async function purgeSnapshotCache(source = 'unknown') {
-  logCacheEvent('info', 'purge_started', { source, tags: [SNAPSHOT_CACHE_TAG], api: 'cloudflare:workers.cache' });
+  const pathPrefixes = source === 'cron' ? ['/data.json'] : [];
+  const purgeOptions = {
+    tags: [SNAPSHOT_CACHE_TAG],
+    ...(pathPrefixes.length ? { pathPrefixes } : {}),
+  };
+  const eventDetails = {
+    source,
+    tags: purgeOptions.tags,
+    ...(pathPrefixes.length ? { pathPrefixes } : {}),
+  };
+  logCacheEvent('info', 'purge_started', { ...eventDetails, api: 'cloudflare:workers.cache' });
   try {
-    const result = await cache.purge({ tags: [SNAPSHOT_CACHE_TAG] });
+    const result = await cache.purge(purgeOptions);
     if (!result?.success) {
       const details = Array.isArray(result?.errors)
         ? result.errors.map(error => error.message || `code ${error.code}`).join('; ')
         : '';
       throw new Error(details || 'Cloudflare가 캐시 purge 요청을 승인하지 않았습니다.');
     }
-    logCacheEvent('info', 'purge_accepted', { source, tags: [SNAPSHOT_CACHE_TAG], success: true });
+    logCacheEvent('info', 'purge_accepted', { ...eventDetails, success: true });
     return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logCacheEvent('error', 'purge_failed', { source, tags: [SNAPSHOT_CACHE_TAG], message });
+    logCacheEvent('error', 'purge_failed', { ...eventDetails, message });
     throw error;
   }
 }
