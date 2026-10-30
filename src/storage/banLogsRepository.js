@@ -1,5 +1,5 @@
 import { cache } from 'cloudflare:workers';
-import { COLS, SNAPSHOT_CACHE_TAG, SNAPSHOT_KEY } from '../constants.js';
+import { COLS, SNAPSHOT_KEY } from '../constants.js';
 
 const INSERT_SQL =
   'INSERT INTO ban_logs(gallery_id,nickname,identifier,content,reason,duration,date_time,manager) ' +
@@ -103,15 +103,10 @@ function logCacheEvent(level, event, details = {}) {
 }
 
 export async function purgeSnapshotCache(source = 'unknown') {
-  const pathPrefixes = source === 'cron' ? ['/data.json'] : [];
-  const purgeOptions = {
-    tags: [SNAPSHOT_CACHE_TAG],
-    ...(pathPrefixes.length ? { pathPrefixes } : {}),
-  };
+  const purgeOptions = { purgeEverything: true };
   const eventDetails = {
     source,
-    tags: purgeOptions.tags,
-    ...(pathPrefixes.length ? { pathPrefixes } : {}),
+    purgeEverything: true,
   };
   logCacheEvent('info', 'purge_started', { ...eventDetails, api: 'cloudflare:workers.cache' });
   try {
