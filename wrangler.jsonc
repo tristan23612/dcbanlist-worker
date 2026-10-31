@@ -3,6 +3,7 @@
   "name": "dcbanlist",
   "main": "src/index.js",
   "compatibility_date": "2026-10-10",
+  "compatibility_flags": ["global_fetch_strictly_public"],
   "workers_dev": true,
   "cache": {
     "enabled": true
@@ -30,6 +31,7 @@
   "vars": {
     "GALLERIES_JSON": "[{\"id\":\"onshinproject\",\"path\":\"mgallery\"}]",
     "MAX_CRAWL_PAGES": "20",
-    "MAX_CRAWL_GALLERIES": "10"
+    "MAX_CRAWL_GALLERIES": "10",
+    "SELF_WORKER_URL": "https://dcbanlist.tristan23612.workers.dev"
   }
 }

@@ -22,6 +22,9 @@ Cloudflare Worker modules for the existing ban log API, archive UI, and a daily 
    npx wrangler secret put DC_PASSWORD
    ```
 
+   In the Cloudflare dashboard, open **Workers & Pages → dcbanlist → Settings → Variables and Secrets** and add the runtime variable `SELF_WORKER_URL` with the production URL, for example `https://dcbanlist.<account-subdomain>.workers.dev`. This URL is not a secret; keep `ADMIN_TOKEN` as a secret. The Cron refresh uses this URL to call the authenticated `/admin/purge-cache` route after rebuilding the snapshot. The `global_fetch_strictly_public` compatibility flag enables the Worker-to-Worker HTTPS request; the code restricts the configured destination to an HTTPS `workers.dev` URL.
+   Set `SELF_WORKER_URL` before deploying. Wrangler is configured with `keep_vars: true` so this dashboard variable is retained on future deploys.
+
 4. Install dependencies and deploy:
 
    ```powershell

@@ -82,7 +82,7 @@ export async function rebuildSnapshot(env) {
 export async function rebuildSnapshotAndPurgeCache(env, { source = 'unknown' } = {}) {
   const snapshot = await rebuildSnapshot(env);
   try {
-    await purgeSnapshotCache(source);
+    await purgeSnapshotCache(source, env);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const cacheError = new Error(`KV 스냅샷은 갱신됐지만 캐시 purge/반영 확인에 실패했습니다: ${message}`);
@@ -102,15 +102,56 @@ function logCacheEvent(level, event, details = {}) {
   else console.log(JSON.stringify(entry));
 }
 
-export async function purgeSnapshotCache(source = 'unknown') {
-  const purgeOptions = { purgeEverything: true };
-  const eventDetails = {
-    source,
-    purgeEverything: true,
-  };
-  logCacheEvent('info', 'purge_started', { ...eventDetails, api: 'cloudflare:workers.cache' });
+async function purgeFromAdminEndpoint(env) {
+  const configuredUrl = String(env.SELF_WORKER_URL || '').trim();
+  if (!configuredUrl) throw new Error('SELF_WORKER_URL runtime variable이 설정되지 않았습니다.');
+  if (!env.ADMIN_TOKEN) throw new Error('ADMIN_TOKEN secret이 설정되지 않았습니다.');
+
+  let baseUrl;
+  try { baseUrl = new URL(configuredUrl); }
+  catch { throw new Error('SELF_WORKER_URL이 올바른 URL이 아닙니다.'); }
+  if (baseUrl.protocol !== 'https:' || !baseUrl.hostname.endsWith('.workers.dev') ||
+      baseUrl.username || baseUrl.password || baseUrl.search || baseUrl.hash || !['', '/'].includes(baseUrl.pathname)) {
+    throw new Error('SELF_WORKER_URL에는 https://<worker>.<account>.workers.dev 주소를 설정하세요.');
+  }
+
+  const purgeUrl = new URL('/admin/purge-cache', baseUrl);
+  const response = await fetch(purgeUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.ADMIN_TOKEN}`,
+      Accept: 'application/json',
+    },
+    redirect: 'manual',
+    signal: AbortSignal.timeout(10_000),
+  });
+  let result;
+  try { result = await response.json(); }
+  catch {
+    if (!response.ok) throw new Error(`내부 관리자 purge 요청 실패 (HTTP ${response.status})`);
+    throw new Error('내부 관리자 purge 응답이 올바른 JSON이 아닙니다.');
+  }
+  if (!response.ok || result?.status !== 'success' || result?.cachePurged !== true) {
+    throw new Error(result?.message || `내부 관리자 purge 요청 실패 (HTTP ${response.status})`);
+  }
+  return result;
+}
+
+export async function purgeSnapshotCache(source = 'unknown', env = null) {
+  const eventDetails = { source, purgeEverything: true };
+  logCacheEvent('info', 'purge_started', {
+    ...eventDetails,
+    api: source === 'cron' ? 'self-http-admin-endpoint' : 'cloudflare:workers.cache',
+  });
   try {
-    const result = await cache.purge(purgeOptions);
+    if (source === 'cron') {
+      if (!env) throw new Error('Cron purge를 위해 Worker 환경 설정이 필요합니다.');
+      const result = await purgeFromAdminEndpoint(env);
+      logCacheEvent('info', 'purge_accepted', { ...eventDetails, via: 'self-http-admin-endpoint', success: true });
+      return result;
+    }
+
+    const result = await cache.purge({ purgeEverything: true });
     if (!result?.success) {
       const details = Array.isArray(result?.errors)
         ? result.errors.map(error => error.message || `code ${error.code}`).join('; ')
