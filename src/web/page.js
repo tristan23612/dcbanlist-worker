@@ -3,6 +3,15 @@ export const HTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
+<script>
+try{
+  const savedTheme=localStorage.getItem('dc-banlist-theme');
+  const initialTheme=savedTheme||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+  document.documentElement.dataset.theme=initialTheme;
+}catch(e){
+  document.documentElement.dataset.theme=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+}
+</script>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-gov-dynamic-subset.min.css" crossorigin>
 <title>Ban Log Archive</title>
@@ -123,15 +132,13 @@ tbody tr.row-enter{animation:row-enter .16s ease-out both}
 let rows=[],rowIds=[],columns=[],galleries=[],selectedGallery='',view=[],shown=0,lastRenderedIndices=[],lastRenderedIds=[],selectedRowIndex=null,adminToken='',pendingDelete=new Set(),applyingDeletes=false,cachePurging=false,contextView=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let savedTheme=null;
-try{savedTheme=localStorage.getItem('dc-banlist-theme')}catch(e){}
-const initialTheme=savedTheme||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
 function setTheme(theme){
   document.documentElement.dataset.theme=theme;
   $('theme').textContent=theme==='dark'?'라이트 모드':'다크 모드';
   try{localStorage.setItem('dc-banlist-theme',theme)}catch(e){}
 }
-setTheme(initialTheme);
+const initialTheme=document.documentElement.dataset.theme||'light';
+$('theme').textContent=initialTheme==='dark'?'라이트 모드':'다크 모드';
 $('theme').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
 function updateApplyButton(){
   $('apply').classList.toggle('is-hidden',!adminToken);
